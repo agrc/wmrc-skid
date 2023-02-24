@@ -12,9 +12,9 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import arcgis
-from palletjack import (
-    FeatureServiceAttachmentsUpdater, FeatureServiceInlineUpdater, GoogleDriveDownloader, GSheetLoader
-)
+import pandas as pd
+from arcgis.features import GeoAccessor, GeoSeriesAccessor
+from palletjack import extract, transform, load
 from supervisor.message_handlers import SendGridHandler
 from supervisor.models import MessageDetails, Supervisor
 
@@ -41,7 +41,7 @@ def _get_secrets():
 
     #: Try to get the secrets from the Cloud Function mount point
     if secret_folder.exists():
-        return json.loads(Path('/secrets/app/secrets.json').read_text(encoding='utf-8'))
+        return json.loads(Path('/secrets/app/skid-secrets.json').read_text(encoding='utf-8'))
 
     #: Otherwise, try to load a local copy for local development
     secret_folder = (Path(__file__).parent / 'secrets')
@@ -118,6 +118,7 @@ def _remove_log_file_handlers(log_name, loggers):
             except Exception as error:
                 pass
 
+
 def process():
     """The main function that does all the work.
     """
@@ -137,6 +138,13 @@ def process():
 
         #: Get our GIS object via the ArcGIS API for Python
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
+
+        combined_df = _parse_from_google_sheets(secrets)
+        with_counties_df = _get_county_names(combined_df, gis)
+
+        live_df = pd.DataFrame.spatial.from_layer(
+            arcgis.features.FeatureLayer.fromitem(gis.content.get(config.FEATURE_LAYER_ITEMID))
+        )
 
         #########################################################################
         #: Use the various palletjack classes and other code to do your work here
@@ -167,6 +175,71 @@ def process():
         _remove_log_file_handlers(log_name, loggers)
 
 
+def _parse_from_google_sheets(secrets):
+
+    #: Get individual sheets
+    gsheet_extractor = extract.GSheetLoader(secrets.SA_JSON)
+    sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, 'SW Facilities', by_title=True)
+    uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, 'UOCCs', by_title=True)
+
+    #: Fix columns
+    sw_df.drop(
+        columns=[
+            'Unnamed: 16', 'Unnamed: 17', 'Unnamed: 18', 'Unnamed: 19', 'Unnamed: 20', 'Unnamed: 21', 'Unnamed: 22',
+            'Unnamed: 23', 'Unnamed: 24', 'Unnamed: 25', 'Unnamed: 26', 'Unnamed: 27'
+        ],
+        inplace=True
+    )
+    sw_df.rename(
+        columns={'Accept Material\n Dropped \n Off by the Public': 'Accept Material Dropped Off by the Public'},
+        inplace=True
+    )
+    uocc_df.rename(
+        columns={
+            'Type': 'Class',
+            'Accept Material\n Dropped \n Off by the Public': 'Accept Material Dropped Off by the Public'
+        },
+        inplace=True
+    )
+    combined_df = pd.concat([sw_df, uocc_df]).query('Status in ["Open", "OPEN"]')
+
+    renamed_df = transform.DataCleaning.rename_dataframe_columns_for_agol(combined_df).rename(columns=str.lower).rename(
+        columns={
+            'longitude_': 'longitude',
+            'accept_material_dropped_off_by_the_public': 'accept_material_dropped_off_by_',
+            'tons_of_material_diverted_from_landfills_last_year': 'tons_of_material_diverted_from_'
+        }
+    )
+
+    return renamed_df
+
+
+def _get_county_names(input_df, gis):
+
+    #: Load counties from open data feature service
+    counties_df = pd.DataFrame.spatial.from_layer(
+        arcgis.features.FeatureLayer.fromitem(gis.content.get('90431cac2f9f49f4bcf1505419583753'))
+    )
+    counties_df.spatial.project(26912)
+    counties_df.reset_index(inplace=True)
+    counties_df = counties_df.reindex(columns=['SHAPE', 'NAME'])  #: We only care about the county name
+    counties_df.spatial.set_geometry('SHAPE')
+    counties_df.spatial.sr = {'wkid': 26912}
+
+    #: Convert dataframe to spatial
+    spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column='longitude', y_column='latitude')
+    spatial_df.reset_index(drop=True, inplace=True)
+    spatial_df.spatial.project(26912)
+    spatial_df.spatial.set_geometry('SHAPE')
+    spatial_df.spatial.sr = {'wkid': 26912}
+
+    #: Perform the join, clean up the output
+    joined_points_df = spatial_df.spatial.join(counties_df, 'left', 'within')
+    joined_points_df.drop(columns=['index_right'], inplace=True)
+    joined_points_df.rename(columns={'NAME': 'county_name'}, inplace=True)
+    joined_points_df['county_name'] = joined_points_df['county_name'].str.title()
+
+    return joined_points_df
 
 
 def main(event, context):  # pylint: disable=unused-argument
@@ -197,6 +270,7 @@ def main(event, context):  # pylint: disable=unused-argument
 
     #: Call process() and any other functions you want to be run as part of the skid here.
     process()
+
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == '__main__':

@@ -34,12 +34,12 @@ setup(
         'Topic :: Utilities',
     ],
     project_urls={
-        'Issue Tracker': 'https://github.com/agrc/python/issues',
+        'Issue Tracker': 'https://github.com/agrc/wmrc-skid/issues',
     },
     keywords=['gis'],
     install_requires=[
         'arcgis==2.1.*',
-        'ugrc-palletjack==3.*',
+        'ugrc-palletjack==3.0.0b1',
         'agrc-supervisor==3.0.*',
     ],
     extras_require={
@@ -51,10 +51,10 @@ setup(
             'pytest-isort~=3.1',
             'pytest-pylint~=0.19',
             'pytest-watch~=4.2',
-            'pytest~=7',
+            'pytest~=7.2',
             'yapf~=0.32',
             'pytest-mock==3.10.*',
-            'functions-framework',
+            'functions-framework~=3.3',
         ]
     },
     setup_requires=[

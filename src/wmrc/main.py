@@ -171,7 +171,9 @@ def process():
 
         module_logger.info('Truncating and loading...')
         load_count = load.FeatureServiceUpdater.truncate_and_load_features(
-            gis, config.FEATURE_LAYER_ITEMID, proj_df, r'd:\temp'
+            gis,
+            config.FEATURE_LAYER_ITEMID,
+            proj_df,
         )
 
         end = datetime.now()

@@ -6,7 +6,7 @@ Run the wmrc script as a cloud function.
 import json
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -139,16 +139,36 @@ def process():
         #: Get our GIS object via the ArcGIS API for Python
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
 
+        #: Do the work
+        module_logger.info('Loading data from Google Sheets...')
         combined_df = _parse_from_google_sheets(secrets)
+        module_logger.info('Adding county names from SGID county boundaries...')
         with_counties_df = _get_county_names(combined_df, gis)
 
-        live_df = pd.DataFrame.spatial.from_layer(
-            arcgis.features.FeatureLayer.fromitem(gis.content.get(config.FEATURE_LAYER_ITEMID))
+        # live_df = pd.DataFrame.spatial.from_layer(
+        #     arcgis.features.FeatureLayer.fromitem(gis.content.get(config.FEATURE_LAYER_ITEMID))
+        # )
+
+        module_logger.info('Preparing data for truncate and load...')
+        proj_df = with_counties_df.copy()
+        proj_df.spatial.project(4326)
+        proj_df.spatial.set_geometry('SHAPE')
+        proj_df.spatial.sr = {'wkid': 4326}
+        proj_df['last_updated'] = date.today()
+        proj_df = transform.DataCleaning.switch_to_datetime(proj_df, ['last_updated'])
+        proj_df = transform.DataCleaning.switch_to_float(
+            proj_df, [
+                'latitude',
+                'longitude',
+                'tons_of_material_diverted_from_',
+                'gallons_of_used_oil_collected_for_recycling_last_year',
+            ]
         )
 
-        #########################################################################
-        #: Use the various palletjack classes and other code to do your work here
-        #########################################################################
+        module_logger.info('Truncating and loading...')
+        load_count = load.FeatureServiceUpdater.truncate_and_load_features(
+            gis, config.FEATURE_LAYER_ITEMID, proj_df, r'd:\temp'
+        )
 
         end = datetime.now()
 
@@ -161,8 +181,8 @@ def process():
             f'Start time: {start.strftime("%H:%M:%S")}',
             f'End time: {end.strftime("%H:%M:%S")}',
             f'Duration: {str(end-start)}',
-            #: Add other rows here containing summary info captured/calculated during the working portion of the skid,
-            #: like the number of rows updated or the number of successful attachment overwrites.
+            '',
+            f'Rows loaded: {load_count}',
         ]
 
         summary_message.message = '\n'.join(summary_rows)
@@ -178,18 +198,12 @@ def process():
 def _parse_from_google_sheets(secrets):
 
     #: Get individual sheets
-    gsheet_extractor = extract.GSheetLoader(secrets.SA_JSON)
+    gsheet_extractor = extract.GSheetLoader(secrets.SERVICE_ACCOUNT_JSON)
     sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, 'SW Facilities', by_title=True)
     uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, 'UOCCs', by_title=True)
 
     #: Fix columns
-    sw_df.drop(
-        columns=[
-            'Unnamed: 16', 'Unnamed: 17', 'Unnamed: 18', 'Unnamed: 19', 'Unnamed: 20', 'Unnamed: 21', 'Unnamed: 22',
-            'Unnamed: 23', 'Unnamed: 24', 'Unnamed: 25', 'Unnamed: 26', 'Unnamed: 27'
-        ],
-        inplace=True
-    )
+    sw_df.drop(columns=[''], inplace=True)
     sw_df.rename(
         columns={'Accept Material\n Dropped \n Off by the Public': 'Accept Material Dropped Off by the Public'},
         inplace=True

@@ -27,6 +27,11 @@ jobs:
           # cache: pip
           # cache-dependency-path: setup.py
 
+    - name: Install libkrb5 for Kerberos on Linux
+      run: |
+        sudo apt install -y libkrb5-dev
+        pip install requests-kerberos
+
       - name: Checkout code
         uses: actions/checkout@v3
 

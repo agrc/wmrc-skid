@@ -12,6 +12,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import arcgis
+import google.auth
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor
 from palletjack import extract, transform, load
@@ -41,7 +42,10 @@ def _get_secrets():
 
     #: Try to get the secrets from the Cloud Function mount point
     if secret_folder.exists():
-        return json.loads(Path('/secrets/app/secrets.json').read_text(encoding='utf-8'))
+        secrets_dict = json.loads(Path('/secrets/app/secrets.json').read_text(encoding='utf-8'))
+        credentials, _ = google.auth.default()
+        secrets_dict['SERVICE_ACCOUNT_JSON'] = credentials
+        return secrets_dict
 
     #: Otherwise, try to load a local copy for local development
     secret_folder = (Path(__file__).parent / 'secrets')

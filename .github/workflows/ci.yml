@@ -145,7 +145,7 @@ jobs:
           source_dir: src/wmrc
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
-          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/monday-morning-topic
+          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/first-of-the-month-topic
           deploy_timeout: 600
           memory_mb: 512
           timeout: 240
@@ -155,28 +155,28 @@ jobs:
 
       - name: 📥 Create PubSub topic
         run: |
-          if [ ! "$(gcloud pubsub topics list | grep monday-morning-topic)" ]; then
-            gcloud pubsub topics create monday-morning-topic --quiet
+          if [ ! "$(gcloud pubsub topics list | grep first-of-the-month-topic)" ]; then
+            gcloud pubsub topics create first-of-the-month-topic --quiet
           fi
 
       - name: 🕰️ Create Cloud Scheduler
         run: |
-          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep monday-morning)" ]; then
-            gcloud scheduler jobs create pubsub monday-morning \
+          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep first-of-the-month)" ]; then
+            gcloud scheduler jobs create pubsub first-of-the-month \
               --description="Trigger the wmrc-skid bot once a week on monday morning" \
               --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \
-              --topic=monday-morning-topic \
+              --topic=first-of-the-month-topic \
               --message-body='{"run": "now"}' \
               --quiet
           else
-            gcloud scheduler jobs update pubsub monday-morning \
+            gcloud scheduler jobs update pubsub first-of-the-month \
               --description="Trigger the wmrc-skid bot once a week on monday morning" \
               --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \
-              --topic=monday-morning-topic \
+              --topic=first-of-the-month-topic \
               --message-body='{"run": "now"}' \
               --quiet
           fi

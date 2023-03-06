@@ -164,7 +164,7 @@ jobs:
           if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep monday-morning)" ]; then
             gcloud scheduler jobs create pubsub monday-morning \
               --description="Trigger the wmrc-skid bot once a week on monday morning" \
-              --schedule="0 9 * * 1" \
+              --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \
               --topic=monday-morning-topic \
@@ -173,7 +173,7 @@ jobs:
           else
             gcloud scheduler jobs update pubsub monday-morning \
               --description="Trigger the wmrc-skid bot once a week on monday morning" \
-              --schedule="0 9 * * 1" \
+              --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \
               --topic=monday-morning-topic \

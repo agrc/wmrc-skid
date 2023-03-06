@@ -149,10 +149,6 @@ def process():
         module_logger.info('Adding county names from SGID county boundaries...')
         with_counties_df = _get_county_names(combined_df, gis)
 
-        # live_df = pd.DataFrame.spatial.from_layer(
-        #     arcgis.features.FeatureLayer.fromitem(gis.content.get(config.FEATURE_LAYER_ITEMID))
-        # )
-
         module_logger.info('Preparing data for truncate and load...')
         proj_df = with_counties_df.copy()
         proj_df.spatial.project(4326)
@@ -209,7 +205,7 @@ def _parse_from_google_sheets(secrets):
     uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, 'UOCCs', by_title=True)
 
     #: Fix columns
-    sw_df.drop(columns=[''], inplace=True)
+    sw_df.drop(columns=[''], inplace=True)  #: Drop empty columns that don't have a name
     sw_df.rename(
         columns={'Accept Material\n Dropped \n Off by the Public': 'Accept Material Dropped Off by the Public'},
         inplace=True

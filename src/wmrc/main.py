@@ -234,7 +234,7 @@ def _get_county_names(input_df, gis):
 
     #: Load counties from open data feature service
     counties_df = pd.DataFrame.spatial.from_layer(
-        arcgis.features.FeatureLayer.fromitem(gis.content.get('90431cac2f9f49f4bcf1505419583753'))
+        arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
     )
     counties_df.spatial.project(26912)
     counties_df.reset_index(inplace=True)

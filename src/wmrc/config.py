@@ -28,6 +28,8 @@ SENDGRID_SETTINGS = {  #: Settings for SendGridHandler
 LOG_LEVEL = logging.DEBUG
 LOG_FILE_NAME = 'log'
 
+COUNTIES_ITEMID = '90431cac2f9f49f4bcf1505419583753'
+
 # FEATURE_LAYER_ITEMID = '4df06137fb0a45459e49107a5f47a326'  #: Beta version
 FEATURE_LAYER_ITEMID = '056bbc52ff3240f6b69666750a61aeff'  #: Live version
 JOIN_COLUMN = 'id_'

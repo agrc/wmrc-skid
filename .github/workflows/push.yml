@@ -42,7 +42,7 @@ jobs:
         run: pytest
 
   deploy-dev:
-    name: Deploy to GCF
+    name: Deploy to GCF - dev
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
@@ -112,7 +112,7 @@ jobs:
           fi
 
   deploy-prod:
-    name: Deploy to GCF
+    name: Deploy to GCF - prod
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'

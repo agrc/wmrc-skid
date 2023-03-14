@@ -1,4 +1,4 @@
-name: Build and Test
+name: Push Events
 
 on:
   push:
@@ -180,3 +180,13 @@ jobs:
               --message-body='{"run": "now"}' \
               --quiet
           fi
+
+      - name: 🔔 Create deployment notification
+        uses: agrc/service-now-worknote-action@v1
+        with:
+          repo-token: ${{ github.token }}
+          username: ${{ secrets.SN_USERNAME }}
+          password: ${{ secrets.SN_PASSWORD }}
+          instance-name: ${{ secrets.SN_INSTANCE }}
+          table-name: ${{ secrets.SN_TABLE }}
+          system-id: ${{ secrets.SN_SYS_ID }}

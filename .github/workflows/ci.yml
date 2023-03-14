@@ -163,7 +163,7 @@ jobs:
         run: |
           if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep first-of-the-month)" ]; then
             gcloud scheduler jobs create pubsub first-of-the-month \
-              --description="Trigger the wmrc-skid bot once a week on monday morning" \
+              --description="Trigger the wmrc-skid bot on the first day of the month" \
               --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \
@@ -172,7 +172,7 @@ jobs:
               --quiet
           else
             gcloud scheduler jobs update pubsub first-of-the-month \
-              --description="Trigger the wmrc-skid bot once a week on monday morning" \
+              --description="Trigger the wmrc-skid bot on the first day of the month" \
               --schedule="0 9 1 * *" \
               --time-zone=America/Denver \
               --location=us-central1 \

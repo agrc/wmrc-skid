@@ -1,4 +1,8 @@
 agrc-supervisor==3.0.*
 ugrc-palletjack==3.0.*
-arcgis==2.1.*
 google-cloud-storage==2.3.*
+arcgis==2.1.0.3
+jupyterlab==3.6.5
+jupyter-server==1.24.0
+ipykernel==6.24.0
+ypy-websocket==0.8.2

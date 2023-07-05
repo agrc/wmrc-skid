@@ -76,9 +76,7 @@ jobs:
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
           event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/monday-morning-topic
-          deploy_timeout: 600
           memory_mb: 512
-          timeout: "10m"
           env_vars: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secret_volumes: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
@@ -146,9 +144,7 @@ jobs:
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
           event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/first-of-the-month-topic
-          deploy_timeout: 600
           memory_mb: 512
-          timeout: "10m"
           env_vars: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secret_volumes: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets

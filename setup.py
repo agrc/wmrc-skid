@@ -39,7 +39,7 @@ setup(
     keywords=['gis'],
     install_requires=[
         'arcgis==2.1.0.3',
-        'ugrc-palletjack==3.0.*',
+        'ugrc-palletjack==3.1.*',
         'agrc-supervisor==3.0.*',
         #: pinned versions to avoid backtracking
         'jupyterlab==3.6.5',

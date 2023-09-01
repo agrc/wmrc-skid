@@ -43,7 +43,7 @@ setup(
         'agrc-supervisor==3.0.*',
         #: pinned versions to avoid backtracking
         'jupyterlab==3.6.5',
-        'jupyter-server==1.24.0',
+        'jupyter-server==2.7.3',
         'ipykernel==6.24.0',
         'ypy-websocket==0.8.2'
     ],

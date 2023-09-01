@@ -44,7 +44,7 @@ setup(
         #: pinned versions to avoid backtracking
         'jupyterlab==3.6.5',
         'jupyter-server==1.24.0',
-        'ipykernel==6.24.0',
+        'ipykernel==6.25.1',
         'ypy-websocket==0.8.2'
     ],
     extras_require={

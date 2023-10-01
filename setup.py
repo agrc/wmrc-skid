@@ -42,7 +42,7 @@ setup(
         'ugrc-palletjack==3.1.*',
         'agrc-supervisor==3.0.*',
         #: pinned versions to avoid backtracking
-        'jupyterlab==3.6.5',
+        'jupyterlab==4.0.6',
         'jupyter-server==1.24.0',
         'ipykernel==6.24.0',
         'ypy-websocket==0.8.2'

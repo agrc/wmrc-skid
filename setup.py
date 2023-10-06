@@ -39,18 +39,18 @@ setup(
     keywords=['gis'],
     install_requires=[
         'arcgis==2.1.0.3',
-        'ugrc-palletjack==3.1.*',
+        'ugrc-palletjack>=3.1,<4.1',
         'agrc-supervisor==3.0.*',
         #: pinned versions to avoid backtracking
-        'jupyterlab==3.6.5',
-        'jupyter-server==1.24.0',
+        'jupyterlab==4.0.6',
+        'jupyter-server==2.7.3',
         'ipykernel==6.24.0',
         'ypy-websocket==0.8.2'
     ],
     extras_require={
         'tests': [
             'pylint-quotes~=0.2',
-            'pylint~=2.15',
+            'pylint>=2.15,<4.0',
             'pytest-cov~=4.0',
             'pytest-instafail~=0.4',
             'pytest-isort~=3.1',

@@ -38,14 +38,14 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'arcgis==2.1.0.3',
+        'arcgis==2.2.0',
         'ugrc-palletjack==3.1.*',
         'agrc-supervisor==3.0.*',
         #: pinned versions to avoid backtracking
         'jupyterlab==3.6.5',
         'jupyter-server==1.24.0',
-        'ipykernel==6.24.0',
-        'ypy-websocket==0.8.2'
+        'ipykernel==6.25.2',
+        'ypy-websocket==0.12.4'
     ],
     extras_require={
         'tests': [

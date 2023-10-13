@@ -4,7 +4,10 @@
 Run the wmrc script as a cloud function.
 """
 import json
+import locale
 import logging
+import os
+import pprint
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -139,6 +142,10 @@ def process():
 
         skid_supervisor = _initialize(log_path, secrets.SENDGRID_API_KEY)
         module_logger = logging.getLogger(config.SKID_NAME)
+
+        module_logger.info(pprint.pformat(dict(os.environ)))
+        module_logger.info(locale.getlocale(locale.LC_ALL))
+        module_logger.info(locale.getlocale(locale.LC_NUMERIC))
 
         #: Get our GIS object via the ArcGIS API for Python
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)

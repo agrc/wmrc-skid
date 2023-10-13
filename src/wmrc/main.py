@@ -144,6 +144,7 @@ def process():
         module_logger = logging.getLogger(config.SKID_NAME)
 
         module_logger.info(pprint.pformat(dict(os.environ)))
+        module_logger.info(locale.getdefaultlocale())
         module_logger.info(locale.getlocale(locale.LC_ALL))
         module_logger.info(locale.getlocale(locale.LC_NUMERIC))
 

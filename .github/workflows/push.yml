@@ -74,7 +74,7 @@ jobs:
         uses: google-github-actions/deploy-cloud-functions@v1
         with:
           name: wmrc-skid
-          runtime: python39
+          runtime: python311
           entry_point: main
           source_dir: src/wmrc
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
@@ -146,7 +146,7 @@ jobs:
         uses: google-github-actions/deploy-cloud-functions@v1
         with:
           name: wmrc-skid
-          runtime: python39
+          runtime: python311
           entry_point: main
           source_dir: src/wmrc
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com

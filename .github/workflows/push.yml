@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: ⬇️ Set up code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🗝️ Authenticate to Google Cloud
         id: auth
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: ⬇️ Set up code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🗝️ Authenticate to Google Cloud
         id: auth

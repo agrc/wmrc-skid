@@ -38,14 +38,8 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'arcgis==2.1.0.3',
-        'ugrc-palletjack==3.1.*',
+        'ugrc-palletjack==4.1.*',
         'agrc-supervisor==3.0.*',
-        #: pinned versions to avoid backtracking
-        'jupyterlab==3.6.5',
-        'jupyter-server==1.24.0',
-        'ipykernel==6.24.0',
-        'ypy-websocket==0.8.2'
     ],
     extras_require={
         'tests': [
@@ -66,6 +60,6 @@ setup(
         'pytest-runner',
     ],
     entry_points={'console_scripts': [
-        'wmrc = wmrc.main:main',
+        'wmrc = wmrc.main:process',
     ]},
 )

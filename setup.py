@@ -10,7 +10,7 @@ from setuptools import find_packages, setup
 
 #: Load version from source file
 version = {}
-version_file = Path(__file__).parent / "src" / "skidname" / "version.py"
+version_file = Path(__file__).parent / "src" / "wmrc" / "version.py"
 exec(version_file.read_text(), version)
 
 

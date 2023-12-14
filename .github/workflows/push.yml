@@ -12,7 +12,7 @@ on:
 
 env:
   CLOUD_FUNCTION_MEMORY: 512
-  CLOUD_FUCNTION_RUN_TIMEOUT: 9m
+  CLOUD_FUNCTION_RUN_TIMEOUT: 9m
   SCHEDULE_NAME: first-of-the-month
   SCHEDULE_CRON: 0 9 1 * *
 
@@ -84,10 +84,10 @@ jobs:
           source_dir: src/wmrc
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
-          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/$SCHEDULE_NAME-topic
+          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/${{ env.SCHEDULE_NAME }}-topic
           deploy_timeout: 600
-          memory_mb: $CLOUD_FUNCTION_MEMORY
-          timeout: $CLOUD_FUNCTION_RUN_TIMEOUT
+          memory_mb: ${{ env.CLOUD_FUNCTION_MEMORY }}
+          timeout: ${{ env.CLOUD_FUNCTION_RUN_TIMEOUT }}
           env_vars: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secret_volumes: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
@@ -156,10 +156,10 @@ jobs:
           source_dir: src/wmrc
           service_account_email: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
-          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/$SCHEDULE_NAME-topic
+          event_trigger_resource: projects/${{ secrets.PROJECT_ID }}/topics/${{ env.SCHEDULE_NAME }}-topic
           deploy_timeout: 600
-          memory_mb: $CLOUD_FUNCTION_MEMORY
-          timeout: $CLOUD_FUNCTION_RUN_TIMEOUT
+          memory_mb: ${{ env.CLOUD_FUNCTION_MEMORY }}
+          timeout: ${{ env.CLOUD_FUNCTION_RUN_TIMEOUT }}
           env_vars: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secret_volumes: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets

@@ -4,27 +4,27 @@
 setup.py
 A module that installs the wmrc skid as a module
 """
-from glob import glob
-from os.path import basename, splitext
+from pathlib import Path
 
 from setuptools import find_packages, setup
 
 #: Load version from source file
 version = {}
-with open('src/wmrc/version.py') as fp:
-    exec(fp.read(), version)
+version_file = Path(__file__).parent / "src" / "skidname" / "version.py"
+exec(version_file.read_text(), version)
+
 
 setup(
     name='wmrc-skid',
-    version=version['__version__'],
-    license='MIT',
-    description='Update the wmrc data from Google Sheets via GCF',
+    version=version["__version__"],
+    license="MIT",
+    long_description=(Path(__file__).parent / "README.md").read_text(),
+    long_description_content_type="text/markdown",
     author='Jacob Adams',
     author_email='jdadms@utah.gov',
     url='https://github.com/agrc/wmrc-skid',
     packages=find_packages('src'),
     package_dir={'': 'src'},
-    py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
     include_package_data=True,
     zip_safe=True,
     classifiers=[
@@ -38,22 +38,20 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'ugrc-palletjack>=4.1,<4.3',
+        'ugrc-palletjack>=4.1,<4.4',
         'agrc-supervisor==3.0.*',
     ],
     extras_require={
         'tests': [
-            'pylint-quotes~=0.2',
-            'pylint>=2.15,<4.0',
-            'pytest-cov~=4.0',
-            'pytest-instafail~=0.4',
-            'pytest-isort~=3.1',
-            'pytest-pylint~=0.19',
-            'pytest-watch~=4.2',
-            'pytest~=7.2',
-            'yapf~=0.32',
-            'pytest-mock>=3.10,<3.13',
-            'functions-framework~=3.3',
+            "pytest-cov>=3,<5",
+            "pytest-instafail==0.5.*",
+            "pytest-mock==3.*",
+            "pytest-ruff==0.*",
+            "pytest-watch==4.*",
+            "pytest>=6,<8",
+            "black>=23.3,<23.12",
+            "ruff==0.0.*",
+            "functions-framework==3.4.*",
         ]
     },
     setup_requires=[

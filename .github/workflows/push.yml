@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           # cache: pip
@@ -71,7 +71,7 @@ jobs:
 
       - name: 🚀 Deploy to Cloud Function
         id: deploy
-        uses: google-github-actions/deploy-cloud-functions@v1
+        uses: google-github-actions/deploy-cloud-functions@v2
         with:
           name: wmrc-skid
           runtime: python311
@@ -143,7 +143,7 @@ jobs:
 
       - name: 🚀 Deploy to Cloud Function
         id: deploy
-        uses: google-github-actions/deploy-cloud-functions@v1
+        uses: google-github-actions/deploy-cloud-functions@v2
         with:
           name: wmrc-skid
           runtime: python311

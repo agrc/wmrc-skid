@@ -38,21 +38,21 @@ setup(
     },
     keywords=['gis'],
     install_requires=[
-        'ugrc-palletjack>=4.1,<4.3',
+        'ugrc-palletjack>=4.1,<4.4',
         'agrc-supervisor==3.0.*',
     ],
     extras_require={
         'tests': [
             'pylint-quotes~=0.2',
             'pylint>=2.15,<4.0',
-            'pytest-cov~=4.0',
+            'pytest-cov>=4,<6',
             'pytest-instafail~=0.4',
-            'pytest-isort~=3.1',
+            'pytest-isort>=3.1,<5.0',
             'pytest-pylint~=0.19',
             'pytest-watch~=4.2',
-            'pytest~=7.2',
+            'pytest>=7.2,<9.0',
             'yapf~=0.32',
-            'pytest-mock>=3.10,<3.13',
+            'pytest-mock>=3.10,<3.15',
             'functions-framework~=3.3',
         ]
     },

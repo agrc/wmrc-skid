@@ -144,6 +144,13 @@ def process():
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
 
         #: Do the work
+        module_logger.info("Loading records from Salesforce...")
+        records = _load_salesforce_data(secrets.SF_CLIENT_SECRET, secrets.SF_CLIENT_ID, secrets.SF_ORG)
+        county_summary_df = _county_summaries(records)
+        facility_summary_df = _facility_summaries(records)
+        materials_recycled_df = _materials_recycled(records)
+        materials_composted_df = _materials_composted(records)
+
         module_logger.info("Loading data from Google Sheets...")
         combined_df = _parse_from_google_sheets(secrets)
         module_logger.info("Adding county names from SGID county boundaries...")

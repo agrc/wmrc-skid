@@ -93,7 +93,7 @@ def _initialize(log_path, sendgrid_api_key):
     logging.captureWarnings(True)
 
     skid_logger.debug("Creating Supervisor object")
-    skid_supervisor = Supervisor(handle_errors=False)
+    skid_supervisor = Supervisor(handle_errors=True)
     sendgrid_settings = config.SENDGRID_SETTINGS
     sendgrid_settings["api_key"] = sendgrid_api_key
     skid_supervisor.add_message_handler(

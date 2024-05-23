@@ -140,10 +140,6 @@ def process():
         skid_supervisor = _initialize(log_path, secrets.SENDGRID_API_KEY)
         module_logger = logging.getLogger(config.SKID_NAME)
 
-        # module_logger.info(pprint.pformat(dict(os.environ)))
-        # module_logger.info(locale.getdefaultlocale())
-        # module_logger.info(locale.getlocale(locale.LC_NUMERIC))
-
         #: Get our GIS object via the ArcGIS API for Python
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
 
@@ -323,6 +319,8 @@ def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
     facility_summaries = records.df.groupby("Calendar_Year__c").apply(
         helpers.facility_tons_diverted_from_landfills,
     )
+    facility_summaries.index.name = ["data_year"]
+    facility_summaries.reset_index(inplace=True)
 
     return facility_summaries
 

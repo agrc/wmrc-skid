@@ -26,6 +26,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          show-progress: false
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -36,11 +41,6 @@ jobs:
       - name: Install libkrb5 for Kerberos on Linux
         run: |
           sudo apt install -y libkrb5-dev
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          show-progress: false
 
       - name: Install module
         run: pip install .[tests]

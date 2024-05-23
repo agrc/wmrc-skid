@@ -22,9 +22,10 @@ from supervisor.models import MessageDetails, Supervisor
 #: This makes it work when calling with just `python <file>`/installing via pip and in the gcf framework, where
 #: the relative imports fail because of how it's calling the function.
 try:
-    from . import config, version
+    from . import config, helpers, version
 except ImportError:
     import config
+    import helpers
     import version
 
 
@@ -267,6 +268,141 @@ def _get_county_names(input_df, gis):
     return joined_points_df
 
 
+def process_salesforce_data():
+
+    start = datetime.now()
+    secrets = SimpleNamespace(**_get_secrets())
+
+    with TemporaryDirectory() as tempdir:
+        tempdir_path = Path(tempdir)
+        log_name = f'{config.LOG_FILE_NAME}_{start.strftime("%Y%m%d-%H%M%S")}.txt'
+        log_path = tempdir_path / log_name
+
+        skid_supervisor = _initialize(log_path, secrets.SENDGRID_API_KEY)
+        module_logger = logging.getLogger(config.SKID_NAME)
+
+        records = _load_salesforce_data(secrets.SF_CLIENT_SECRET, secrets.SF_CLIENT_ID, secrets.SF_ORG)
+        county_summary_df = _county_summaries(records)
+        facility_summary_df = _facility_summaries(records)
+        materials_recycled_df = _materials_recycled(records)
+        materials_composted_df = _materials_composted(records)
+
+        end = datetime.now()
+
+        out_dir = Path(r"C:\gis\Projects\WMRC\Data\from_sf\skid")
+
+        county_summary_df.to_csv(out_dir / f"county_summary_{start.strftime('%Y%m%d')}.csv", index=False)
+        facility_summary_df.to_csv(out_dir / f"facility_summary_{start.strftime('%Y%m%d')}.csv", index=False)
+        materials_recycled_df.to_csv(out_dir / f"materials_recycled_{start.strftime('%Y%m%d')}.csv", index=False)
+        materials_composted_df.to_csv(out_dir / f"materials_composted_{start.strftime('%Y%m%d')}.csv", index=False)
+
+
+def _load_salesforce_data(client_secret, client_id, org):
+
+    salesforce_credentials = extract.SalesforceApiUserCredentials(client_secret, client_id)
+    salesforce_extractor = extract.SalesforceRestLoader(org, salesforce_credentials)
+
+    salesforce_records = helpers.SalesForceRecords(salesforce_extractor)
+    salesforce_records.extract_data_from_salesforce()
+
+    return salesforce_records
+
+
+def _county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+
+    county_df = records.df.groupby("Calendar_Year__c").apply(
+        helpers.county_summaries, county_fields=records.county_fields
+    )
+    county_df.index.names = ["data_year", "name"]
+    county_df.reset_index(inplace=True)
+
+    return county_df
+
+
+def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    facility_summaries = records.df.groupby("Calendar_Year__c").apply(
+        helpers.facility_tons_diverted_from_landfills,
+    )
+
+    return facility_summaries
+
+
+def _materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    recycling_fields = [
+        "Combined Total of Material Received",
+        "Total Corrugated Boxes received",
+        "Total Paper and Paperboard received",
+        "Total Plastic Materials received",
+        "Total Glass Materials received",
+        "Total Ferrous Metal Materials received",
+        "Total Aluminum Metal Materials received",
+        "Total Nonferrous Metal received",
+        "Total Rubber Materials received",
+        "Total Leather Materials received",
+        "Total Textile Materials received",
+        "Total Wood Materials received",
+        "Total Yard Trimmings received",
+        "Total Food received",
+        "Total Tires received",
+        "Total Lead-Acid Batteries received",
+        "Total Lithium-Ion Batteries received",
+        "Total Other Electronics received",
+        "Total ICD received",
+        "Total SW Stream Materials received",
+    ]
+    renamed_fields = [records.field_mapping[field] for field in recycling_fields if field in records.field_mapping]
+    materials_recycled = (
+        records.df.groupby("Calendar_Year__c")
+        .apply(
+            helpers.rates_per_material,
+            classification="Recycling",
+            fields=renamed_fields,
+            total_field="Combined_Total_of_Material_Received__c",
+        )
+        .droplevel(1)
+        .reset_index()
+        .rename(columns={"Calendar_Year__c": "year"})
+    )
+    materials_recycled["year"] = materials_recycled["year"].apply(helpers.convert_to_int)
+
+    return materials_recycled
+
+
+def _materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    composting_fields = [
+        "Municipal Solid Waste",
+        "Total Material Received Compost",
+        "Total Paper and Paperboard receiced (C)",
+        "Total Plastic Materials received (C)",
+        "Total Rubber Materials received (C)",
+        "Total Leather Materials received (C)",
+        "Total Textile Materials received (C)",
+        "Total Wood Materials received (C)",
+        "Total Yard Trimmings received (C)",
+        "Total Food received (C)",
+        "Total Agricultural Organics received",
+        "Total BFS received",
+        "Total Drywall received",
+        "Total Other CM received",
+    ]
+    renamed_fields = [records.field_mapping[field] for field in composting_fields if field in records.field_mapping]
+    materials_composted = (
+        records.df.groupby("Calendar_Year__c")
+        .apply(
+            helpers.rates_per_material,
+            classification="Composts",
+            fields=renamed_fields,
+            total_field="Total_Material_Received_Compost__c",
+        )
+        .droplevel(1)
+        .reset_index()
+        .rename(columns={"Calendar_Year__c": "year"})
+    )
+    materials_composted["year"] = materials_composted["year"].apply(helpers.convert_to_int)
+
+    return materials_composted
+
+
 def main(event, context):  # pylint: disable=unused-argument
     """Entry point for Google Cloud Function triggered by pub/sub event
 
@@ -299,4 +435,4 @@ def main(event, context):  # pylint: disable=unused-argument
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    process()
+    process_salesforce_data()

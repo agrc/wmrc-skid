@@ -164,10 +164,12 @@ def process():
             [
                 "latitude",
                 "longitude",
-                "tons_of_material_diverted_from_",
+                # "tons_of_material_diverted_from_",
                 "gallons_of_used_oil_collected_for_recycling_last_year",
             ],
         )
+
+        proj_df.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
 
         module_logger.info("Truncating and loading...")
         updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, tempdir)

@@ -205,7 +205,11 @@ def _parse_from_google_sheets(secrets):
     uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, "UOCCs", by_title=True)
 
     #: Fix columns
-    sw_df.drop(columns=[""], inplace=True)  #: Drop empty columns that don't have a name
+    try:
+        sw_df.drop(columns=[""], inplace=True)  #: Drop empty columns that don't have a name
+    except KeyError:
+        pass
+
     sw_df.rename(
         columns={"Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public"},
         inplace=True,

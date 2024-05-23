@@ -15,6 +15,7 @@ env:
   CLOUD_FUNCTION_RUN_TIMEOUT: 9m
   SCHEDULE_NAME: first-of-the-month
   SCHEDULE_CRON: 0 9 1 * *
+  SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot at the beginning of the month
 
 concurrency:
   group: "${{ github.head_ref || github.ref }}"
@@ -102,7 +103,7 @@ jobs:
         run: |
           if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $SCHEDULE_NAME)" ]; then
             gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
-              --description="Trigger the wmrc-skid bot once a week on monday morning" \
+              --description="$SCHEDULE_DESCRIPTION" \
               --schedule="$SCHEDULE_CRON" \
               --time-zone=America/Denver \
               --location=us-central1 \
@@ -111,7 +112,7 @@ jobs:
               --quiet
           else
             gcloud scheduler jobs update pubsub $SCHEDULE_NAME \
-              --description="Trigger the wmrc-skid bot once a week on monday morning" \
+              --description="$SCHEDULE_DESCRIPTION" \
               --schedule="$SCHEDULE_CRON" \
               --time-zone=America/Denver \
               --location=us-central1 \
@@ -174,7 +175,7 @@ jobs:
         run: |
           if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $SCHEDULE_NAME)" ]; then
             gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
-              --description="Trigger the wmrc-skid bot on the first day of the month" \
+              --description="$SCHEDULE_DESCRIPTION" \
               --schedule="$SCHEDULE_CRON" \
               --time-zone=America/Denver \
               --location=us-central1 \
@@ -183,7 +184,7 @@ jobs:
               --quiet
           else
             gcloud scheduler jobs update pubsub $SCHEDULE_NAME \
-              --description="Trigger the wmrc-skid bot on the first day of the month" \
+              --description="$SCHEDULE_DESCRIPTION" \
               --schedule="$SCHEDULE_CRON" \
               --time-zone=America/Denver \
               --location=us-central1 \

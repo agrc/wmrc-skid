@@ -144,40 +144,66 @@ def process():
         gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
 
         #: Do the work
+
+        #: Load data from Salesforce and generate analyses
         module_logger.info("Loading records from Salesforce...")
         records = _load_salesforce_data(secrets.SF_CLIENT_SECRET, secrets.SF_CLIENT_ID, secrets.SF_ORG)
-        county_summary_df = _county_summaries(records)
-        facility_summary_df = _facility_summaries(records)
+        county_summary_df = _county_summaries(records).query("data_year == @config.YEAR")
+        facility_summary_df = _facility_summaries(records).query("data_year == @config.YEAR")
         materials_recycled_df = _materials_recycled(records)
         materials_composted_df = _materials_composted(records)
 
+        #: Facilities on map
+        #:  Load data from Google sheets, add county names
         module_logger.info("Loading data from Google Sheets...")
         combined_df = _parse_from_google_sheets(secrets)
         module_logger.info("Adding county names from SGID county boundaries...")
         with_counties_df = _get_county_names(combined_df, gis)
 
+        #:  Merge facility summaries and google sheet on id_
+        google_and_sf_data = with_counties_df.merge(
+            facility_summary_df[["id_", "tons_of_material_diverted_from_"]],
+            on="id_",
+        )
+
+        #:  Merge live data with sheet/sf data
+        live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FEATURE_LAYER_ITEMID)
+        updated_facility_data = live_facility_data.set_index("id_")
+        updated_facility_data.update(google_and_sf_data.set_index("id_"))
+        updated_facility_data.reset_index(inplace=True)
+
+        #:  Truncate and load to AGOL
         module_logger.info("Preparing data for truncate and load...")
-        proj_df = with_counties_df.copy()
-        proj_df.spatial.project(4326)
-        proj_df.spatial.set_geometry("SHAPE")
-        proj_df.spatial.sr = {"wkid": 4326}
-        proj_df["last_updated"] = date.today()
-        proj_df = transform.DataCleaning.switch_to_datetime(proj_df, ["last_updated"])
-        proj_df = transform.DataCleaning.switch_to_float(
-            proj_df,
+        # new_facility_data = with_counties_df.copy()
+        updated_facility_data.spatial.project(4326)
+        updated_facility_data.spatial.set_geometry("SHAPE")
+        updated_facility_data.spatial.sr = {"wkid": 4326}
+        updated_facility_data["last_updated"] = date.today()
+        updated_facility_data = transform.DataCleaning.switch_to_datetime(updated_facility_data, ["last_updated"])
+        updated_facility_data = transform.DataCleaning.switch_to_float(
+            updated_facility_data,
             [
                 "latitude",
                 "longitude",
-                # "tons_of_material_diverted_from_",
+                "tons_of_material_diverted_from_",
                 "gallons_of_used_oil_collected_for_recycling_last_year",
             ],
         )
 
-        proj_df.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
+        # #: Fields from sheet that aren't in AGOL
+        # updated_facility_data.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
 
         module_logger.info("Truncating and loading...")
         updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, tempdir)
-        load_count = updater.truncate_and_load_features(proj_df)
+        load_count = updater.truncate_and_load_features(updated_facility_data)
+
+        #: county summaries on map, dashboard:
+        #:  Load live data
+        #:  Merge county summaries
+        #:  Update existing AGOL in-place
+
+        #: Materials recycled on dashboard:
+        #:  Truncate and load live data with sf analyses
 
         end = datetime.now()
 
@@ -240,6 +266,7 @@ def _parse_from_google_sheets(secrets):
             }
         )
     )
+    renamed_df["id_"] = renamed_df["id_"].astype(str)
 
     return renamed_df
 
@@ -318,16 +345,22 @@ def _county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
     )
     county_df.index.names = ["data_year", "name"]
     county_df.reset_index(inplace=True)
+    county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
 
     return county_df
 
 
 def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
-    facility_summaries = records.df.groupby("Calendar_Year__c").apply(
-        helpers.facility_tons_diverted_from_landfills,
+    facility_summaries = (
+        records.df.groupby("Calendar_Year__c")
+        .apply(
+            helpers.facility_tons_diverted_from_landfills,
+        )
+        .droplevel(1)
     )
-    facility_summaries.index.name = ["data_year"]
+    facility_summaries.index.name = "data_year"
     facility_summaries.reset_index(inplace=True)
+    facility_summaries["data_year"] = facility_summaries["data_year"].apply(helpers.convert_to_int)
 
     return facility_summaries
 
@@ -440,4 +473,4 @@ def main(event, context):  # pylint: disable=unused-argument
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    process_salesforce_data()
+    process()

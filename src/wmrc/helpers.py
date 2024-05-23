@@ -295,7 +295,6 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
         sum_series[col] = (subset_df["Municipal_Solid_Waste__c"] / 100 * subset_df[col]).sum()
     sum_df = pd.DataFrame(sum_series, columns=["amount"])
     sum_df["percent"] = sum_df["amount"] / sum_df.loc[total_field, "amount"]
-    #: FIXME: ^ parameterize the totals field
 
     #: Rename columns for existing AGOL layer
     regex = re.compile(r"(?<=Total_)(.+)(?=_Materials_recei)|(?<=Total_)(.+)(?=_recei)")

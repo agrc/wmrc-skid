@@ -150,8 +150,8 @@ class Skid:
         records = self._load_salesforce_data()
         facility_summary_df = self._facility_summaries(records).query("data_year == @config.YEAR")
         county_summary_df = self._county_summaries(records)  #.query("data_year == @config.YEAR")
-        materials_recycled_df = self._materials_recycled(records)
-        materials_composted_df = self._materials_composted(records)
+        # materials_recycled_df = self._materials_recycled(records)
+        # materials_composted_df = self._materials_composted(records)
 
         #: Facilities on map
         facilities_load_count = self._update_facilities(gis, facility_summary_df)
@@ -161,6 +161,7 @@ class Skid:
 
         #: Materials recycled on dashboard:
         #:  Truncate and load live data with sf analyses
+
 
         end = datetime.now()
 
@@ -215,7 +216,7 @@ class Skid:
         )
 
         #:  Merge live data with sheet/sf data
-        live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FEATURE_LAYER_ITEMID)
+        live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FACILITIES_LAYER_ITEMID)
         updated_facility_data = live_facility_data.set_index("id_")
         updated_facility_data.update(google_and_sf_data.set_index("id_"))
         updated_facility_data.reset_index(inplace=True)
@@ -242,7 +243,7 @@ class Skid:
         # updated_facility_data.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
 
         self.skid_logger.info("Truncating and loading...")
-        updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, self.tempdir_path)
+        updater = load.FeatureServiceUpdater(gis, config.FACILITIES_LAYER_ITEMID, self.tempdir_path)
         load_count = updater.truncate_and_load_features(updated_facility_data)
         return load_count
 

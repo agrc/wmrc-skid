@@ -70,6 +70,7 @@ class SalesForceRecords:
             "services/data/v60.0/query/", "SELECT FIELDS(ALL) from Application_Report__c LIMIT 200"
         )
         self.county_fields = [col for col in df_for_columns.columns if "_County" in col]
+        self.county_fields.append("Out_of_State__c")
 
         aliases = [
             "Combined Total of Material Recycled",
@@ -190,18 +191,18 @@ def county_summaries(year_df: pd.DataFrame, county_fields: list[str]) -> pd.Data
 
     #: Now sum all the counties to get a single value per county per category
     counties_df = pd.DataFrame()
-    counties_df["county_wide_msw_recycling"] = recycling_df.sum()
+    counties_df["county_wide_msw_recycled"] = recycling_df.sum()
     counties_df["county_wide_msw_composted"] = composted_df.sum()
     counties_df["county_wide_msw_digested"] = digested_df.sum()
     counties_df["county_wide_msw_landfilled"] = landfilled_df.sum()
     counties_df["county_wide_msw_recycling_rate"] = (
         (
-            counties_df["county_wide_msw_recycling"]
+            counties_df["county_wide_msw_recycled"]
             + counties_df["county_wide_msw_composted"]
             + counties_df["county_wide_msw_digested"]
         )
         / (
-            counties_df["county_wide_msw_recycling"]
+            counties_df["county_wide_msw_recycled"]
             + counties_df["county_wide_msw_composted"]
             + counties_df["county_wide_msw_digested"]
             + counties_df["county_wide_msw_landfilled"]

@@ -29,136 +29,183 @@ except ImportError:
     import version
 
 
-def _get_secrets():
-    """A helper method for loading secrets from either a GCF mount point or the local src/wmrc/secrets/secrets.json file
+class Skid:
+    def __init__(self):
+        self.secrets = SimpleNamespace(**self._get_secrets())
+        self.tempdir = TemporaryDirectory(ignore_cleanup_errors=True)
+        self.tempdir_path = Path(self.tempdir.name)
+        self.log_name = f'{config.LOG_FILE_NAME}_{datetime.now().strftime("%Y%m%d-%H%M%S")}.txt'
+        self.log_path = self.tempdir_path / self.log_name
+        self.skid_supervisor = self._initialize_supervisor()
+        self.skid_logger = logging.getLogger(config.SKID_NAME)
 
-    Raises:
-        FileNotFoundError: If the secrets file can't be found.
+    def __del__(self):
+        self.tempdir.cleanup()
 
-    Returns:
-        dict: The secrets .json loaded as a dictionary
-    """
+    @staticmethod
+    def _get_secrets():
+        """A helper method for loading secrets from either a GCF mount point or the local src/wmrc/secrets/secrets.json file
 
-    secret_folder = Path("/secrets")
+        Raises:
+            FileNotFoundError: If the secrets file can't be found.
 
-    #: Try to get the secrets from the Cloud Function mount point
-    if secret_folder.exists():
-        secrets_dict = json.loads(Path("/secrets/app/secrets.json").read_text(encoding="utf-8"))
-        credentials, _ = google.auth.default()
-        secrets_dict["SERVICE_ACCOUNT_JSON"] = credentials
-        return secrets_dict
+        Returns:
+            dict: The secrets .json loaded as a dictionary
+        """
 
-    #: Otherwise, try to load a local copy for local development
-    secret_folder = Path(__file__).parent / "secrets"
-    if secret_folder.exists():
-        return json.loads((secret_folder / "secrets.json").read_text(encoding="utf-8"))
+        secret_folder = Path("/secrets")
 
-    raise FileNotFoundError("Secrets folder not found; secrets not loaded.")
+        #: Try to get the secrets from the Cloud Function mount point
+        if secret_folder.exists():
+            secrets_dict = json.loads(Path("/secrets/app/secrets.json").read_text(encoding="utf-8"))
+            credentials, _ = google.auth.default()
+            secrets_dict["SERVICE_ACCOUNT_JSON"] = credentials
+            return secrets_dict
 
+        #: Otherwise, try to load a local copy for local development
+        #: This file path might not work if extracted to its own module
+        secret_folder = Path(__file__).parent / "secrets"
+        if secret_folder.exists():
+            return json.loads((secret_folder / "secrets.json").read_text(encoding="utf-8"))
 
-def _initialize(log_path, sendgrid_api_key):
-    """A helper method to set up logging and supervisor
+        raise FileNotFoundError("Secrets folder not found; secrets not loaded.")
 
-    Args:
-        log_path (Path): File path for the logfile to be written
-        sendgrid_api_key (str): The API key for sendgrid for this particular application
+    def _initialize_supervisor(self):
+        """A helper method to set up logging and supervisor
 
-    Returns:
-        Supervisor: The supervisor object used for sending messages
-    """
+        Args:
+            log_path (Path): File path for the logfile to be written
+            sendgrid_api_key (str): The API key for sendgrid for this particular application
 
-    skid_logger = logging.getLogger(config.SKID_NAME)
-    skid_logger.setLevel(config.LOG_LEVEL)
-    palletjack_logger = logging.getLogger("palletjack")
-    palletjack_logger.setLevel(config.LOG_LEVEL)
+        Returns:
+            Supervisor: The supervisor object used for sending messages
+        """
 
-    cli_handler = logging.StreamHandler(sys.stdout)
-    cli_handler.setLevel(config.LOG_LEVEL)
-    formatter = logging.Formatter(
-        fmt="%(levelname)-7s %(asctime)s %(name)15s:%(lineno)5s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    cli_handler.setFormatter(formatter)
+        skid_logger = logging.getLogger(config.SKID_NAME)
+        skid_logger.setLevel(config.LOG_LEVEL)
+        palletjack_logger = logging.getLogger("palletjack")
+        palletjack_logger.setLevel(config.LOG_LEVEL)
 
-    log_handler = logging.FileHandler(log_path, mode="w")
-    log_handler.setLevel(config.LOG_LEVEL)
-    log_handler.setFormatter(formatter)
-
-    skid_logger.addHandler(cli_handler)
-    skid_logger.addHandler(log_handler)
-    palletjack_logger.addHandler(cli_handler)
-    palletjack_logger.addHandler(log_handler)
-
-    #: Log any warnings at logging.WARNING
-    #: Put after everything else to prevent creating a duplicate, default formatter
-    #: (all log messages were duplicated if put at beginning)
-    logging.captureWarnings(True)
-
-    skid_logger.debug("Creating Supervisor object")
-    skid_supervisor = Supervisor(handle_errors=False)
-    sendgrid_settings = config.SENDGRID_SETTINGS
-    sendgrid_settings["api_key"] = sendgrid_api_key
-    skid_supervisor.add_message_handler(
-        SendGridHandler(
-            sendgrid_settings=sendgrid_settings, client_name=config.SKID_NAME, client_version=version.__version__
+        cli_handler = logging.StreamHandler(sys.stdout)
+        cli_handler.setLevel(config.LOG_LEVEL)
+        formatter = logging.Formatter(
+            fmt="%(levelname)-7s %(asctime)s %(name)15s:%(lineno)5s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
-    )
+        cli_handler.setFormatter(formatter)
 
-    return skid_supervisor
+        log_handler = logging.FileHandler(self.log_path, mode="w")
+        log_handler.setLevel(config.LOG_LEVEL)
+        log_handler.setFormatter(formatter)
 
+        skid_logger.addHandler(cli_handler)
+        skid_logger.addHandler(log_handler)
+        palletjack_logger.addHandler(cli_handler)
+        palletjack_logger.addHandler(log_handler)
 
-def _remove_log_file_handlers(log_name, loggers):
-    """A helper function to remove the file handlers so the tempdir will close correctly
+        #: Log any warnings at logging.WARNING
+        #: Put after everything else to prevent creating a duplicate, default formatter
+        #: (all log messages were duplicated if put at beginning)
+        logging.captureWarnings(True)
 
-    Args:
-        log_name (str): The logfiles filename
-        loggers (List<str>): The loggers that are writing to log_name
-    """
+        skid_logger.debug("Creating Supervisor object")
+        self.supervisor = Supervisor(handle_errors=False)
+        sendgrid_settings = config.SENDGRID_SETTINGS
+        sendgrid_settings["api_key"] = self.secrets.SENDGRID_API_KEY
+        self.supervisor.add_message_handler(
+            SendGridHandler(
+                sendgrid_settings=sendgrid_settings, client_name=config.SKID_NAME, client_version=version.__version__
+            )
+        )
 
-    for logger in loggers:
-        for handler in logger.handlers:
-            try:
-                if log_name in handler.stream.name:
-                    logger.removeHandler(handler)
-                    handler.close()
-            except Exception:
-                pass
+    def _remove_log_file_handlers(log_name, loggers):
+        """A helper function to remove the file handlers so the tempdir will close correctly
 
+        Args:
+            log_name (str): The logfiles filename
+            loggers (List<str>): The loggers that are writing to log_name
+        """
 
-def process():
-    """The main function that does all the work."""
+        for logger in loggers:
+            for handler in logger.handlers:
+                try:
+                    if log_name in handler.stream.name:
+                        logger.removeHandler(handler)
+                        handler.close()
+                except Exception:
+                    pass
 
-    #: Set up secrets, tempdir, supervisor, and logging
-    start = datetime.now()
+    def process(self):
+        """The main function that does all the work."""
 
-    secrets = SimpleNamespace(**_get_secrets())
-
-    with TemporaryDirectory() as tempdir:
-        tempdir_path = Path(tempdir)
-        log_name = f'{config.LOG_FILE_NAME}_{start.strftime("%Y%m%d-%H%M%S")}.txt'
-        log_path = tempdir_path / log_name
-
-        skid_supervisor = _initialize(log_path, secrets.SENDGRID_API_KEY)
-        module_logger = logging.getLogger(config.SKID_NAME)
+        #: Set up secrets, tempdir, supervisor, and logging
+        start = datetime.now()
 
         #: Get our GIS object via the ArcGIS API for Python
-        gis = arcgis.gis.GIS(config.AGOL_ORG, secrets.AGOL_USER, secrets.AGOL_PASSWORD)
+        gis = arcgis.gis.GIS(config.AGOL_ORG, self.secrets.AGOL_USER, self.secrets.AGOL_PASSWORD)
 
         #: Do the work
 
         #: Load data from Salesforce and generate analyses
-        module_logger.info("Loading records from Salesforce...")
-        records = _load_salesforce_data(secrets.SF_CLIENT_SECRET, secrets.SF_CLIENT_ID, secrets.SF_ORG)
-        county_summary_df = _county_summaries(records).query("data_year == @config.YEAR")
-        facility_summary_df = _facility_summaries(records).query("data_year == @config.YEAR")
-        materials_recycled_df = _materials_recycled(records)
-        materials_composted_df = _materials_composted(records)
+        self.skid_logger.info("Loading records from Salesforce...")
+        records = self._load_salesforce_data()
+        facility_summary_df = self._facility_summaries(records).query("data_year == @config.YEAR")
+        county_summary_df = self._county_summaries(records)  #.query("data_year == @config.YEAR")
+        materials_recycled_df = self._materials_recycled(records)
+        materials_composted_df = self._materials_composted(records)
 
         #: Facilities on map
-        #:  Load data from Google sheets, add county names
-        module_logger.info("Loading data from Google Sheets...")
-        combined_df = _parse_from_google_sheets(secrets)
-        module_logger.info("Adding county names from SGID county boundaries...")
-        with_counties_df = _get_county_names(combined_df, gis)
+        # facilities_load_count = self._update_facilities(gis, facility_summary_df)
+
+        #: county summaries on map, dashboard:
+        counties_update_count = self._update_counties(gis, county_summary_df)
+
+        #: Materials recycled on dashboard:
+        #:  Truncate and load live data with sf analyses
+
+        end = datetime.now()
+
+        summary_message = MessageDetails()
+        summary_message.subject = f"{config.SKID_NAME} Update Summary"
+        summary_rows = [
+            f'{config.SKID_NAME} update {start.strftime("%Y-%m-%d")}',
+            "=" * 20,
+            "",
+            f'Start time: {start.strftime("%H:%M:%S")}',
+            f'End time: {end.strftime("%H:%M:%S")}',
+            f"Duration: {str(end-start)}",
+            "",
+            f"Rows loaded: {facilities_load_count}",
+        ]
+
+        summary_message.message = "\n".join(summary_rows)
+        summary_message.attachments = self.tempdir_path / self.log_name
+
+        self.skid_supervisor.notify(summary_message)
+
+        #: Remove file handler so the tempdir will close properly
+        loggers = [logging.getLogger(config.SKID_NAME), logging.getLogger("palletjack")]
+        self._remove_log_file_handlers(self.log_name, loggers)
+
+    def _update_counties(self, gis, county_summary_df):
+        # existing_county_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_LAYER_ITEMID)
+
+        county_geoms = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_BOUNDARIES_ITEMID)[["name", "SHAPE"]].set_index("name")
+        new_data = county_summary_df.merge(county_geoms, left_index=True, right_index=True, how="left")
+
+        # existing_county_data.update(county_summary_df)
+        new_data.reset_index(inplace=True)
+        new_data.spatial.project(4326)
+        new_data.spatial.sr = {"wkid": 4326}
+
+        updater = load.FeatureServiceUpdater(gis, config.COUNTY_LAYER_ITEMID, self.tempdir_path)
+        update_count = updater.truncate_and_load_features(new_data)
+        return update_count
+
+    def _update_facilities(self, gis, facility_summary_df):
+        self.skid_logger.info("Loading data from Google Sheets...")
+        combined_df = self._parse_from_google_sheets()
+        self.skid_logger.info("Adding county names from SGID county boundaries...")
+        with_counties_df = self._get_county_names(combined_df, gis)
 
         #:  Merge facility summaries and google sheet on id_
         google_and_sf_data = with_counties_df.merge(
@@ -173,7 +220,7 @@ def process():
         updated_facility_data.reset_index(inplace=True)
 
         #:  Truncate and load to AGOL
-        module_logger.info("Preparing data for truncate and load...")
+        self.skid_logger.info("Preparing data for truncate and load...")
         # new_facility_data = with_counties_df.copy()
         updated_facility_data.spatial.project(4326)
         updated_facility_data.spatial.set_geometry("SHAPE")
@@ -193,252 +240,199 @@ def process():
         # #: Fields from sheet that aren't in AGOL
         # updated_facility_data.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
 
-        module_logger.info("Truncating and loading...")
-        updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, tempdir)
+        self.skid_logger.info("Truncating and loading...")
+        updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, self.tempdir)
         load_count = updater.truncate_and_load_features(updated_facility_data)
+        return load_count
 
-        #: county summaries on map, dashboard:
-        #:  Load live data
-        #:  Merge county summaries
-        #:  Update existing AGOL in-place
+    def _parse_from_google_sheets(self):
+        #: Get individual sheets
+        gsheet_extractor = extract.GSheetLoader(self.secrets.SERVICE_ACCOUNT_JSON)
+        sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(
+            self.secrets.SHEET_ID, "SW Facilities", by_title=True
+        )
+        uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(self.secrets.SHEET_ID, "UOCCs", by_title=True)
 
-        #: Materials recycled on dashboard:
-        #:  Truncate and load live data with sf analyses
+        #: Fix columns
+        try:
+            sw_df.drop(columns=[""], inplace=True)  #: Drop empty columns that don't have a name
+        except KeyError:
+            pass
 
-        end = datetime.now()
-
-        summary_message = MessageDetails()
-        summary_message.subject = f"{config.SKID_NAME} Update Summary"
-        summary_rows = [
-            f'{config.SKID_NAME} update {start.strftime("%Y-%m-%d")}',
-            "=" * 20,
-            "",
-            f'Start time: {start.strftime("%H:%M:%S")}',
-            f'End time: {end.strftime("%H:%M:%S")}',
-            f"Duration: {str(end-start)}",
-            "",
-            f"Rows loaded: {load_count}",
-        ]
-
-        summary_message.message = "\n".join(summary_rows)
-        summary_message.attachments = tempdir_path / log_name
-
-        skid_supervisor.notify(summary_message)
-
-        #: Remove file handler so the tempdir will close properly
-        loggers = [logging.getLogger(config.SKID_NAME), logging.getLogger("palletjack")]
-        _remove_log_file_handlers(log_name, loggers)
-
-
-def _parse_from_google_sheets(secrets):
-    #: Get individual sheets
-    gsheet_extractor = extract.GSheetLoader(secrets.SERVICE_ACCOUNT_JSON)
-    sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, "SW Facilities", by_title=True)
-    uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(secrets.SHEET_ID, "UOCCs", by_title=True)
-
-    #: Fix columns
-    try:
-        sw_df.drop(columns=[""], inplace=True)  #: Drop empty columns that don't have a name
-    except KeyError:
-        pass
-
-    sw_df.rename(
-        columns={"Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public"},
-        inplace=True,
-    )
-    uocc_df.rename(
-        columns={
-            "Type": "Class",
-            "Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public",
-        },
-        inplace=True,
-    )
-    combined_df = pd.concat([sw_df, uocc_df]).query('Status in ["Open", "OPEN"]')
-
-    renamed_df = (
-        transform.DataCleaning.rename_dataframe_columns_for_agol(combined_df)
-        .rename(columns=str.lower)
-        .rename(
+        sw_df.rename(
+            columns={"Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public"},
+            inplace=True,
+        )
+        uocc_df.rename(
             columns={
-                "longitude_": "longitude",
-                "accept_material_dropped_off_by_the_public": "accept_material_dropped_off_by_",
-                "tons_of_material_diverted_from_landfills_last_year": "tons_of_material_diverted_from_",
-            }
+                "Type": "Class",
+                "Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public",
+            },
+            inplace=True,
         )
-    )
-    renamed_df["id_"] = renamed_df["id_"].astype(str)
+        combined_df = pd.concat([sw_df, uocc_df]).query('Status in ["Open", "OPEN"]')
 
-    return renamed_df
-
-
-def _get_county_names(input_df, gis):
-    #: Load counties from open data feature service
-    counties_df = pd.DataFrame.spatial.from_layer(
-        arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
-    )
-    counties_df.spatial.project(26912)
-    counties_df.reset_index(inplace=True)
-    counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name
-    counties_df.spatial.set_geometry("SHAPE")
-    counties_df.spatial.sr = {"wkid": 26912}
-
-    #: Convert dataframe to spatial
-    spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column="longitude", y_column="latitude")
-    spatial_df.reset_index(drop=True, inplace=True)
-    spatial_df.spatial.project(26912)
-    spatial_df.spatial.set_geometry("SHAPE")
-    spatial_df.spatial.sr = {"wkid": 26912}
-
-    #: Perform the join, clean up the output
-    joined_points_df = spatial_df.spatial.join(counties_df, "left", "within")
-    joined_points_df.drop(columns=["index_right"], inplace=True)
-    joined_points_df.rename(columns={"NAME": "county_name"}, inplace=True)
-    joined_points_df["county_name"] = joined_points_df["county_name"].str.title()
-
-    return joined_points_df
-
-
-def process_salesforce_data():
-
-    start = datetime.now()
-    secrets = SimpleNamespace(**_get_secrets())
-
-    with TemporaryDirectory() as tempdir:
-        tempdir_path = Path(tempdir)
-        log_name = f'{config.LOG_FILE_NAME}_{start.strftime("%Y%m%d-%H%M%S")}.txt'
-        log_path = tempdir_path / log_name
-
-        skid_supervisor = _initialize(log_path, secrets.SENDGRID_API_KEY)
-        module_logger = logging.getLogger(config.SKID_NAME)
-
-        records = _load_salesforce_data(secrets.SF_CLIENT_SECRET, secrets.SF_CLIENT_ID, secrets.SF_ORG)
-        county_summary_df = _county_summaries(records)
-        facility_summary_df = _facility_summaries(records)
-        materials_recycled_df = _materials_recycled(records)
-        materials_composted_df = _materials_composted(records)
-
-        end = datetime.now()
-
-        out_dir = Path(r"C:\gis\Projects\WMRC\Data\from_sf\skid")
-
-        county_summary_df.to_csv(out_dir / f"county_summary_{start.strftime('%Y%m%d')}.csv", index=False)
-        facility_summary_df.to_csv(out_dir / f"facility_summary_{start.strftime('%Y%m%d')}.csv", index=False)
-        materials_recycled_df.to_csv(out_dir / f"materials_recycled_{start.strftime('%Y%m%d')}.csv", index=False)
-        materials_composted_df.to_csv(out_dir / f"materials_composted_{start.strftime('%Y%m%d')}.csv", index=False)
-
-
-def _load_salesforce_data(client_secret, client_id, org):
-
-    salesforce_credentials = extract.SalesforceApiUserCredentials(client_secret, client_id)
-    salesforce_extractor = extract.SalesforceRestLoader(org, salesforce_credentials)
-
-    salesforce_records = helpers.SalesForceRecords(salesforce_extractor)
-    salesforce_records.extract_data_from_salesforce()
-
-    return salesforce_records
-
-
-def _county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
-
-    county_df = records.df.groupby("Calendar_Year__c").apply(
-        helpers.county_summaries, county_fields=records.county_fields
-    )
-    county_df.index.names = ["data_year", "name"]
-    county_df.reset_index(inplace=True)
-    county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
-
-    return county_df
-
-
-def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
-    facility_summaries = (
-        records.df.groupby("Calendar_Year__c")
-        .apply(
-            helpers.facility_tons_diverted_from_landfills,
+        renamed_df = (
+            transform.DataCleaning.rename_dataframe_columns_for_agol(combined_df)
+            .rename(columns=str.lower)
+            .rename(
+                columns={
+                    "longitude_": "longitude",
+                    "accept_material_dropped_off_by_the_public": "accept_material_dropped_off_by_",
+                    "tons_of_material_diverted_from_landfills_last_year": "tons_of_material_diverted_from_",
+                }
+            )
         )
-        .droplevel(1)
-    )
-    facility_summaries.index.name = "data_year"
-    facility_summaries.reset_index(inplace=True)
-    facility_summaries["data_year"] = facility_summaries["data_year"].apply(helpers.convert_to_int)
+        renamed_df["id_"] = renamed_df["id_"].astype(str)
 
-    return facility_summaries
+        return renamed_df
 
-
-def _materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
-    recycling_fields = [
-        "Combined Total of Material Received",
-        "Total Corrugated Boxes received",
-        "Total Paper and Paperboard received",
-        "Total Plastic Materials received",
-        "Total Glass Materials received",
-        "Total Ferrous Metal Materials received",
-        "Total Aluminum Metal Materials received",
-        "Total Nonferrous Metal received",
-        "Total Rubber Materials received",
-        "Total Leather Materials received",
-        "Total Textile Materials received",
-        "Total Wood Materials received",
-        "Total Yard Trimmings received",
-        "Total Food received",
-        "Total Tires received",
-        "Total Lead-Acid Batteries received",
-        "Total Lithium-Ion Batteries received",
-        "Total Other Electronics received",
-        "Total ICD received",
-        "Total SW Stream Materials received",
-    ]
-    renamed_fields = [records.field_mapping[field] for field in recycling_fields if field in records.field_mapping]
-    materials_recycled = (
-        records.df.groupby("Calendar_Year__c")
-        .apply(
-            helpers.rates_per_material,
-            classification="Recycling",
-            fields=renamed_fields,
-            total_field="Combined_Total_of_Material_Received__c",
+    @staticmethod
+    def _get_county_names(input_df, gis):
+        #: Load counties from open data feature service
+        counties_df = pd.DataFrame.spatial.from_layer(
+            arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
         )
-        .droplevel(1)
-        .reset_index()
-        .rename(columns={"Calendar_Year__c": "year"})
-    )
-    materials_recycled["year"] = materials_recycled["year"].apply(helpers.convert_to_int)
+        counties_df.spatial.project(26912)
+        counties_df.reset_index(inplace=True)
+        counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name
+        counties_df.spatial.set_geometry("SHAPE")
+        counties_df.spatial.sr = {"wkid": 26912}
 
-    return materials_recycled
+        #: Convert dataframe to spatial
+        spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column="longitude", y_column="latitude")
+        spatial_df.reset_index(drop=True, inplace=True)
+        spatial_df.spatial.project(26912)
+        spatial_df.spatial.set_geometry("SHAPE")
+        spatial_df.spatial.sr = {"wkid": 26912}
 
+        #: Perform the join, clean up the output
+        joined_points_df = spatial_df.spatial.join(counties_df, "left", "within")
+        joined_points_df.drop(columns=["index_right"], inplace=True)
+        joined_points_df.rename(columns={"NAME": "county_name"}, inplace=True)
+        joined_points_df["county_name"] = joined_points_df["county_name"].str.title()
 
-def _materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
-    composting_fields = [
-        "Municipal Solid Waste",
-        "Total Material Received Compost",
-        "Total Paper and Paperboard receiced (C)",
-        "Total Plastic Materials received (C)",
-        "Total Rubber Materials received (C)",
-        "Total Leather Materials received (C)",
-        "Total Textile Materials received (C)",
-        "Total Wood Materials received (C)",
-        "Total Yard Trimmings received (C)",
-        "Total Food received (C)",
-        "Total Agricultural Organics received",
-        "Total BFS received",
-        "Total Drywall received",
-        "Total Other CM received",
-    ]
-    renamed_fields = [records.field_mapping[field] for field in composting_fields if field in records.field_mapping]
-    materials_composted = (
-        records.df.groupby("Calendar_Year__c")
-        .apply(
-            helpers.rates_per_material,
-            classification="Composts",
-            fields=renamed_fields,
-            total_field="Total_Material_Received_Compost__c",
+        return joined_points_df
+
+    #: The following methods operate on all the salesforce data, while the SalesForceRecords class operates on subsets
+    #: of the data, usually a year at a time. Thus, these methods get all the records and then groupby them by year,
+    #: applying the SalesForceRecords methods.
+    def _load_salesforce_data(self) -> helpers.SalesForceRecords:
+
+        salesforce_credentials = extract.SalesforceApiUserCredentials(
+            self.secrets.SF_CLIENT_SECRET, self.secrets.SF_CLIENT_ID
         )
-        .droplevel(1)
-        .reset_index()
-        .rename(columns={"Calendar_Year__c": "year"})
-    )
-    materials_composted["year"] = materials_composted["year"].apply(helpers.convert_to_int)
+        salesforce_extractor = extract.SalesforceRestLoader(self.secrets.SF_ORG, salesforce_credentials)
 
-    return materials_composted
+        salesforce_records = helpers.SalesForceRecords(salesforce_extractor)
+        salesforce_records.extract_data_from_salesforce()
+
+        return salesforce_records
+
+    @staticmethod
+    def _county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+
+        county_df = records.df.groupby("Calendar_Year__c").apply(
+            helpers.county_summaries, county_fields=records.county_fields
+        )
+        county_df.index.names = ["data_year", "name"]
+        county_df.reset_index(level="data_year", inplace=True)
+        county_df.rename(index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True)
+        # county_df.index = county_df.index.apply(lambda x: x.replace("__c", "").replace("_", " "))
+        county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
+
+        return county_df
+
+    @staticmethod
+    def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        facility_summaries = (
+            records.df.groupby("Calendar_Year__c")
+            .apply(
+                helpers.facility_tons_diverted_from_landfills,
+            )
+            .droplevel(1)
+        )
+        facility_summaries.index.name = "data_year"
+        facility_summaries.reset_index(inplace=True)
+        facility_summaries["data_year"] = facility_summaries["data_year"].apply(helpers.convert_to_int)
+
+        return facility_summaries
+
+    @staticmethod
+    def _materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        recycling_fields = [
+            "Combined Total of Material Received",
+            "Total Corrugated Boxes received",
+            "Total Paper and Paperboard received",
+            "Total Plastic Materials received",
+            "Total Glass Materials received",
+            "Total Ferrous Metal Materials received",
+            "Total Aluminum Metal Materials received",
+            "Total Nonferrous Metal received",
+            "Total Rubber Materials received",
+            "Total Leather Materials received",
+            "Total Textile Materials received",
+            "Total Wood Materials received",
+            "Total Yard Trimmings received",
+            "Total Food received",
+            "Total Tires received",
+            "Total Lead-Acid Batteries received",
+            "Total Lithium-Ion Batteries received",
+            "Total Other Electronics received",
+            "Total ICD received",
+            "Total SW Stream Materials received",
+        ]
+        renamed_fields = [records.field_mapping[field] for field in recycling_fields if field in records.field_mapping]
+        materials_recycled = (
+            records.df.groupby("Calendar_Year__c")
+            .apply(
+                helpers.rates_per_material,
+                classification="Recycling",
+                fields=renamed_fields,
+                total_field="Combined_Total_of_Material_Received__c",
+            )
+            .droplevel(1)
+            .reset_index()
+            .rename(columns={"Calendar_Year__c": "year"})
+        )
+        materials_recycled["year"] = materials_recycled["year"].apply(helpers.convert_to_int)
+
+        return materials_recycled
+
+    @staticmethod
+    def _materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        composting_fields = [
+            "Municipal Solid Waste",
+            "Total Material Received Compost",
+            "Total Paper and Paperboard receiced (C)",
+            "Total Plastic Materials received (C)",
+            "Total Rubber Materials received (C)",
+            "Total Leather Materials received (C)",
+            "Total Textile Materials received (C)",
+            "Total Wood Materials received (C)",
+            "Total Yard Trimmings received (C)",
+            "Total Food received (C)",
+            "Total Agricultural Organics received",
+            "Total BFS received",
+            "Total Drywall received",
+            "Total Other CM received",
+        ]
+        renamed_fields = [records.field_mapping[field] for field in composting_fields if field in records.field_mapping]
+        materials_composted = (
+            records.df.groupby("Calendar_Year__c")
+            .apply(
+                helpers.rates_per_material,
+                classification="Composts",
+                fields=renamed_fields,
+                total_field="Total_Material_Received_Compost__c",
+            )
+            .droplevel(1)
+            .reset_index()
+            .rename(columns={"Calendar_Year__c": "year"})
+        )
+        materials_composted["year"] = materials_composted["year"].apply(helpers.convert_to_int)
+
+        return materials_composted
 
 
 def main(event, context):  # pylint: disable=unused-argument
@@ -468,9 +462,10 @@ def main(event, context):  # pylint: disable=unused-argument
     #: arguments listed, but doesn't have to do anything with them (I haven't used them in anything yet).
 
     #: Call process() and any other functions you want to be run as part of the skid here.
-    process()
+    wmrc_skid = Skid()
+    wmrc_skid.process()
 
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    process()
+    main(1, 2)  #: Just some junk args to satisfy the signature needed for Cloud Functions

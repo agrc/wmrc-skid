@@ -36,7 +36,7 @@ class Skid:
         self.tempdir_path = Path(self.tempdir.name)
         self.log_name = f'{config.LOG_FILE_NAME}_{datetime.now().strftime("%Y%m%d-%H%M%S")}.txt'
         self.log_path = self.tempdir_path / self.log_name
-        self.skid_supervisor = self._initialize_supervisor()
+        self._initialize_supervisor()
         self.skid_logger = logging.getLogger(config.SKID_NAME)
 
     def __del__(self):
@@ -117,7 +117,7 @@ class Skid:
             )
         )
 
-    def _remove_log_file_handlers(log_name, loggers):
+    def _remove_log_file_handlers(self, loggers):
         """A helper function to remove the file handlers so the tempdir will close correctly
 
         Args:
@@ -128,7 +128,7 @@ class Skid:
         for logger in loggers:
             for handler in logger.handlers:
                 try:
-                    if log_name in handler.stream.name:
+                    if self.log_name in handler.stream.name:
                         logger.removeHandler(handler)
                         handler.close()
                 except Exception:
@@ -154,7 +154,7 @@ class Skid:
         materials_composted_df = self._materials_composted(records)
 
         #: Facilities on map
-        # facilities_load_count = self._update_facilities(gis, facility_summary_df)
+        facilities_load_count = self._update_facilities(gis, facility_summary_df)
 
         #: county summaries on map, dashboard:
         counties_update_count = self._update_counties(gis, county_summary_df)
@@ -174,17 +174,18 @@ class Skid:
             f'End time: {end.strftime("%H:%M:%S")}',
             f"Duration: {str(end-start)}",
             "",
-            f"Rows loaded: {facilities_load_count}",
+            f"Facility rows loaded: {facilities_load_count}",
+            f"County rows loaded: {counties_update_count}",
         ]
 
         summary_message.message = "\n".join(summary_rows)
         summary_message.attachments = self.tempdir_path / self.log_name
 
-        self.skid_supervisor.notify(summary_message)
+        self.supervisor.notify(summary_message)
 
         #: Remove file handler so the tempdir will close properly
         loggers = [logging.getLogger(config.SKID_NAME), logging.getLogger("palletjack")]
-        self._remove_log_file_handlers(self.log_name, loggers)
+        self._remove_log_file_handlers(loggers)
 
     def _update_counties(self, gis, county_summary_df):
         # existing_county_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_LAYER_ITEMID)
@@ -241,7 +242,7 @@ class Skid:
         # updated_facility_data.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
 
         self.skid_logger.info("Truncating and loading...")
-        updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, self.tempdir)
+        updater = load.FeatureServiceUpdater(gis, config.FEATURE_LAYER_ITEMID, self.tempdir_path)
         load_count = updater.truncate_and_load_features(updated_facility_data)
         return load_count
 

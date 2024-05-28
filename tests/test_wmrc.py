@@ -1,5 +1,4 @@
 import pandas as pd
-
 from wmrc import main
 
 
@@ -65,6 +64,7 @@ class TestUpdateMethods:
 
         pd.testing.assert_frame_equal(updater_mock.truncate_and_load_features.call_args[0][0], test_df)
 
+
 class TestSummaryMethods:
 
     def test_county_summaries_happy_path(self, mocker):
@@ -101,3 +101,18 @@ class TestSummaryMethods:
         test_df.index.name = "name"
 
         pd.testing.assert_frame_equal(result_df, test_df)
+
+
+class TestSmallMethods:
+
+    def test_add_bogus_geometries_happy_path(self):
+        input_df = pd.DataFrame(
+            {
+                "a": [1, 2],
+                "b": [3, 4],
+            }
+        )
+
+        result_df = main.Skid._add_bogus_geometries(input_df)
+
+        assert result_df.spatial.validate()

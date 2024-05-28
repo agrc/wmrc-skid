@@ -149,19 +149,31 @@ class Skid:
         self.skid_logger.info("Loading records from Salesforce...")
         records = self._load_salesforce_data()
         facility_summary_df = self._facility_summaries(records).query("data_year == @config.YEAR")
-        county_summary_df = self._county_summaries(records)  #.query("data_year == @config.YEAR")
-        # materials_recycled_df = self._materials_recycled(records)
-        # materials_composted_df = self._materials_composted(records)
+        county_summary_df = self._county_summaries(records)  # .query("data_year == @config.YEAR")
+        materials_recycled_df = self._materials_recycled(records)
+        materials_composted_df = self._materials_composted(records)
 
         #: Facilities on map
+        self.skid_logger.info("Updating facility info...")
         facilities_load_count = self._update_facilities(gis, facility_summary_df)
 
         #: county summaries on map, dashboard:
+        self.skid_logger.info("Updating county info...")
         counties_update_count = self._update_counties(gis, county_summary_df)
 
         #: Materials recycled on dashboard:
-        #:  Truncate and load live data with sf analyses
+        self.skid_logger.info("Updating materials recycled...")
+        materials_spatial = self._add_bogus_geometries(materials_recycled_df)
+        materials_spatial.rename(columns={"percent": "percent_"}, inplace=True)
+        materials_loader = load.FeatureServiceUpdater(gis, config.MATERIALS_LAYER_ITEMID, self.tempdir_path)
+        materials_count = materials_loader.truncate_and_load_features(materials_spatial)
 
+        #:  Materials composted on dashboard:
+        self.skid_logger.info("Updating materials composted...")
+        composting_spatial = self._add_bogus_geometries(materials_composted_df)
+        composting_spatial.rename(columns={"percent": "percent_"}, inplace=True)
+        composting_loader = load.FeatureServiceUpdater(gis, config.COMPOSTING_LAYER_ITEMID, self.tempdir_path)
+        composting_count = composting_loader.truncate_and_load_features(composting_spatial)
 
         end = datetime.now()
 
@@ -177,6 +189,8 @@ class Skid:
             "",
             f"Facility rows loaded: {facilities_load_count}",
             f"County rows loaded: {counties_update_count}",
+            f"Materials recycled rows loaded: {materials_count}",
+            f"Materials composted rows loaded: {composting_count}",
         ]
 
         summary_message.message = "\n".join(summary_rows)
@@ -189,12 +203,12 @@ class Skid:
         self._remove_log_file_handlers(loggers)
 
     def _update_counties(self, gis, county_summary_df):
-        # existing_county_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_LAYER_ITEMID)
 
-        county_geoms = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_BOUNDARIES_ITEMID)[["name", "SHAPE"]].set_index("name")
+        county_geoms = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_BOUNDARIES_ITEMID)[
+            ["name", "SHAPE"]
+        ].set_index("name")
         new_data = county_summary_df.merge(county_geoms, left_index=True, right_index=True, how="left")
 
-        # existing_county_data.update(county_summary_df)
         new_data.reset_index(inplace=True)
         new_data.spatial.project(4326)
         new_data.spatial.sr = {"wkid": 4326}
@@ -339,7 +353,9 @@ class Skid:
         )
         county_df.index.names = ["data_year", "name"]
         county_df.reset_index(level="data_year", inplace=True)
-        county_df.rename(index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True)
+        county_df.rename(
+            index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True
+        )
         # county_df.index = county_df.index.apply(lambda x: x.replace("__c", "").replace("_", " "))
         county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
 
@@ -395,9 +411,9 @@ class Skid:
             )
             .droplevel(1)
             .reset_index()
-            .rename(columns={"Calendar_Year__c": "year"})
+            .rename(columns={"Calendar_Year__c": "year_"})
         )
-        materials_recycled["year"] = materials_recycled["year"].apply(helpers.convert_to_int)
+        materials_recycled["year_"] = materials_recycled["year_"].apply(helpers.convert_to_int)
 
         return materials_recycled
 
@@ -430,11 +446,31 @@ class Skid:
             )
             .droplevel(1)
             .reset_index()
-            .rename(columns={"Calendar_Year__c": "year"})
+            .rename(columns={"Calendar_Year__c": "year_"})
         )
-        materials_composted["year"] = materials_composted["year"].apply(helpers.convert_to_int)
+        materials_composted["year_"] = materials_composted["year_"].apply(helpers.convert_to_int)
 
         return materials_composted
+
+    @staticmethod
+    def _add_bogus_geometries(input_dataframe: pd.DataFrame) -> pd.DataFrame:
+        """Add a bogus geometry (point in downtown Malad City, ID) to a dataframe in WKID 4326.
+
+        Args:
+            input_dataframe (pd.DataFrame): Non-spatial dataframe to add geometry to
+
+        Returns:
+            pd.DataFrame: Spatially-enabled dataframe version of input input_dataframe with geometry added to every row
+        """
+
+        input_dataframe["x"] = 12_495_000
+        input_dataframe["y"] = 5_188_000
+
+        spatial_dataframe = pd.DataFrame.spatial.from_xy(input_dataframe, "x", "y", sr=4326)
+
+        spatial_dataframe.drop(columns=["x", "y"], inplace=True)
+
+        return spatial_dataframe
 
 
 def main(event, context):  # pylint: disable=unused-argument

@@ -175,6 +175,16 @@ class Skid:
         composting_loader = load.FeatureServiceUpdater(gis, config.COMPOSTING_LAYER_ITEMID, self.tempdir_path)
         composting_count = composting_loader.truncate_and_load_features(composting_spatial)
 
+        #: Statewide metrics
+        self.skid_logger.info("Updating statewide metrics...")
+        statewide_totals_df = county_summary_df.groupby("data_year").apply(helpers.statewide_yearly_metrics)
+        contamination_rates_df = self._contamination_rates_by_tonnage(records)
+        # contamination_rates_df = self._contamination_rates_by_facility(records)
+        statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
+        statewide_spatial = self._add_bogus_geometries(statewide_metrics)
+        statewide_loader = load.FeatureServiceUpdater(gis, config.STATEWIDE_LAYER_ITEMID, self.tempdir_path)
+        statewide_count = statewide_loader.truncate_and_load_features(statewide_spatial)
+
         end = datetime.now()
 
         summary_message = MessageDetails()
@@ -191,6 +201,7 @@ class Skid:
             f"County rows loaded: {counties_update_count}",
             f"Materials recycled rows loaded: {materials_count}",
             f"Materials composted rows loaded: {composting_count}",
+            f"Statewide metrics rows loaded: {statewide_count}",
         ]
 
         summary_message.message = "\n".join(summary_rows)
@@ -451,6 +462,50 @@ class Skid:
         materials_composted["year_"] = materials_composted["year_"].apply(helpers.convert_to_int)
 
         return materials_composted
+
+    @staticmethod
+    def _contamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        records.df["recycling_tons_contaminated"] = (
+            records.df["Annual_Recycling_Contamination_Rate__c"]
+            / 100
+            * records.df["Combined_Total_of_Material_Recycled__c"]
+        )
+        records.df["recycling_tons_report_contamination_total"] = pd.NA
+        records.df.loc[
+            ~records.df["recycling_tons_contaminated"].isnull(), "recycling_tons_report_contamination_total"
+        ] = records.df["Combined_Total_of_Material_Recycled__c"]
+        records.df[
+            [
+                "Combined_Total_of_Material_Recycled__c",
+                "Annual_Recycling_Contamination_Rate__c",
+                "recycling_tons_contaminated",
+                "recycling_tons_report_contamination_total",
+            ]
+        ].sort_values("Combined_Total_of_Material_Recycled__c", ascending=False).head(20)
+
+        contamination_rates = records.df.groupby("Calendar_Year__c").apply(
+            lambda year_df: (
+                1
+                - (
+                    year_df["recycling_tons_contaminated"].sum()
+                    / year_df["recycling_tons_report_contamination_total"].sum()
+                )
+            )
+            * 100
+        )
+        contamination_rates.name = "annual_recycling_uncontaminated_rate"
+        contamination_rates.index.name = "data_year"
+        contamination_rates.index = contamination_rates.index.map(helpers.convert_to_int)
+
+        return contamination_rates
+
+    def _contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
+
+        records.df["annual_recycling_uncontaminated_rate"] = 100 - records.df["Annual_Recycling_Contamination_Rate__c"]
+        yearly_stats = records.df.groupby("Calendar_Year__c").describe()
+        yearly_stats.index = yearly_stats.index.map(helpers.convert_to_int)
+        yearly_stats.index.name = "data_year"
+        return yearly_stats[["count", "mean", "std"]]
 
     @staticmethod
     def _add_bogus_geometries(input_dataframe: pd.DataFrame) -> pd.DataFrame:

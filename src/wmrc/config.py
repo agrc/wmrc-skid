@@ -22,7 +22,8 @@ except Exception:
 AGOL_ORG = "https://utahdeq.maps.arcgis.com"
 SENDGRID_SETTINGS = {  #: Settings for SendGridHandler
     "from_address": "noreply@utah.gov",
-    "to_addresses": ["jdadams@utah.gov", "stevienorcross@utah.gov", "gerardorodriguez@utah.gov"],
+    "to_addresses": ["jdadams@utah.gov"],
+    # "to_addresses": ["jdadams@utah.gov", "stevienorcross@utah.gov", "gerardorodriguez@utah.gov"],
     "prefix": f"{SKID_NAME} on {HOST_NAME}: ",
 }
 LOG_LEVEL = logging.DEBUG
@@ -39,5 +40,6 @@ COUNTY_BOUNDARIES_ITEMID = "4d0671aac09347d3a03415632f19ddb3"  #: Must include a
 
 MATERIALS_LAYER_ITEMID = "7e13c71b32284915bad47983aca3602b"
 COMPOSTING_LAYER_ITEMID = "9b543c20de704839b90502a49ce1b8f3"
+STATEWIDE_LAYER_ITEMID = "a5abaa46850e46ff88ee6024ce21f52e"
 
 YEAR = 2023

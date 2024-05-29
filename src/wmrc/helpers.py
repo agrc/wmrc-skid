@@ -79,11 +79,11 @@ class SalesForceRecords:
             "Total Material managed by AD/C",
             "Municipal Waste In-State (in Tons)",
             "Facility Name",
-            # "Solid Waste Facility ID Number",
+            # "Solid Waste Facility ID Number",  #: From nested Facility object
             "Combined Total of Material Recycled",
             "Total Materials recycled",
             "Total Materials sent to composting",
-            # "Combined Total Material for Composting",
+            # "Combined Total Material for Composting",  #: Typo in field name
             "Total Material managed by AD/C",
             "Combined Total Material for Combustion",
             "Total Materials combusted",
@@ -124,6 +124,7 @@ class SalesForceRecords:
             "Total Drywall received",
             "Total Other CM received",
             "Calendar Year",
+            "Annual Recycling Contamination Rate",
         ]
         missing_fields = []
         for alias in aliases:
@@ -309,3 +310,36 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
     )
 
     return sum_df
+
+
+def statewide_yearly_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
+    """Calculate statewide yearly metrics for recycling, composting, digestion, and landfilling (RCDL).
+
+    Args:
+        county_year_df (pd.DataFrame): Dataframe of county summaries for a given year with the RCDL metrics (can be
+            applied to a groupby (year) object).
+
+    Returns:
+        pd.DataFrame: Statewide yearly metrics.
+    """
+    statewide_series = pd.Series()
+    statewide_series["statewide_msw_recycled"] = county_year_df["county_wide_msw_recycled"].sum()
+    statewide_series["statewide_msw_composted"] = county_year_df["county_wide_msw_composted"].sum()
+    statewide_series["statewide_msw_digested"] = county_year_df["county_wide_msw_digested"].sum()
+    statewide_series["statewide_msw_landfilled"] = county_year_df["county_wide_msw_landfilled"].sum()
+    statewide_series["statewide_msw_recycling_rate"] = (
+        (
+            statewide_series["statewide_msw_recycled"]
+            + statewide_series["statewide_msw_composted"]
+            + statewide_series["statewide_msw_digested"]
+        )
+        / (
+            statewide_series["statewide_msw_recycled"]
+            + statewide_series["statewide_msw_composted"]
+            + statewide_series["statewide_msw_digested"]
+            + statewide_series["statewide_msw_landfilled"]
+        )
+        * 100
+    )
+
+    return statewide_series

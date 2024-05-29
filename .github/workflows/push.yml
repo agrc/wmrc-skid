@@ -13,9 +13,9 @@ on:
 env:
   CLOUD_FUNCTION_MEMORY: 1024
   CLOUD_FUNCTION_RUN_TIMEOUT: 9m
-  SCHEDULE_NAME: first-of-the-month
-  SCHEDULE_CRON: 0 9 1 * *
-  SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot at the beginning of the month
+  SCHEDULE_NAME: saturday-evening
+  SCHEDULE_CRON: 0 22 * * 6
+  SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot every saturday evening at 10pm
 
 concurrency:
   group: "${{ github.head_ref || github.ref }}"

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from wmrc import main
 
@@ -95,6 +96,41 @@ class TestSummaryMethods:
                 "recycled": [1, 2, 3, 4],
                 "landfilled": [5, 6, 7, 8],
                 "total": [9, 10, 11, 12],
+            },
+            index=["Box Elder County", "Out of State", "Box Elder County", "Out of State"],
+        )
+        test_df.index.name = "name"
+
+        pd.testing.assert_frame_equal(result_df, test_df)
+
+    def test_county_summaries_replace_nan_with_0(self, mocker):
+        records_mock = mocker.Mock()
+        summaries_df = pd.DataFrame(
+            {
+                "recycled": [1, 2, 3, 4],
+                "landfilled": [5, 6, np.nan, 8],
+                "total": [9, 10, np.nan, 12],
+            },
+            index=pd.MultiIndex.from_tuples(
+                [
+                    ("2022", "Box Elder County"),
+                    ("2022", "Out of State"),
+                    ("2023", "Box Elder County"),
+                    ("2023", "Out of State"),
+                ],
+                names=["year", "county"],
+            ),
+        )
+        records_mock.df.groupby.return_value.apply.return_value = summaries_df
+
+        result_df = main.Skid._county_summaries(records_mock)
+
+        test_df = pd.DataFrame(
+            {
+                "data_year": [2022, 2022, 2023, 2023],
+                "recycled": [1, 2, 3, 4],
+                "landfilled": [5, 6, 0.0, 8],
+                "total": [9, 10, 0.0, 12],
             },
             index=["Box Elder County", "Out of State", "Box Elder County", "Out of State"],
         )

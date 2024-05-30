@@ -368,6 +368,7 @@ class Skid:
             index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True
         )
         county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
+        county_df.fillna(0, inplace=True)
 
         return county_df
 

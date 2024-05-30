@@ -34,6 +34,9 @@ def add_bogus_geometries(input_dataframe: pd.DataFrame) -> pd.DataFrame:
 
 
 class SalesForceRecords:
+    """A helper class that extracts data from Salesforce based on fields from WMRC's manual reports. Provides access to
+    the data through the .df attribute along with the field mapping and list of counties.
+    """
 
     def __init__(self, salesforce_extractor: palletjack.extract.SalesforceRestLoader):
         self.salesforce_extractor = salesforce_extractor
@@ -185,7 +188,7 @@ class YearlyAnalysis:
         Args:
             year_df (pd.DataFrame): A dataframe of facility records for a single year (can be .applied to a groupby
                 (year) object). Columns include percentages for each county and the fields needed for the calculations
-            county_fields (List[str]): List county field names
+            county_fields (list[str]): List county field names
 
         Returns:
             pd.DataFrame: A dataframe of tons recycled, composted, digested, and landfilled for each county along with
@@ -248,7 +251,7 @@ class YearlyAnalysis:
 
         Args:
             year_df (pd.DataFrame): Dataframe of facility records for a single year (can be .applied to a groupby
-            year)).
+                year)).
 
         Returns:
             pd.DataFrame: Facility name, id, and total tons diverted from landfills
@@ -299,7 +302,8 @@ class YearlyAnalysis:
         """Calculate recycling/composting rates for each material type for a given year.
 
         Args:
-            year_df (pd.DataFrame): Dataframe of facility records for a single year (can be .applied to a groupby(year) object).
+            year_df (pd.DataFrame): Dataframe of facility records for a single year (can be .applied to a groupby(year)
+                object).
             classification (str): Report Classification, either "Recycling" or "Composts"
             fields (list[str]): List of the fields containing the material totals.
             total_field (str): The field containing the total material received for the percentage calculation.
@@ -339,8 +343,8 @@ class YearlyAnalysis:
 
     @staticmethod
     def statewide_yearly_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
-        """Calculate statewide yearly metrics for recycling, composting, digestion, and landfilling (RCDL), filtering out
-            out of state totals.
+        """Calculate statewide yearly metrics for recycling, composting, digestion, and landfilling (RCDL), filtering
+        out out of state totals.
 
         Args:
             county_year_df (pd.DataFrame): Dataframe of county summaries for a given year with the RCDL metrics (can be

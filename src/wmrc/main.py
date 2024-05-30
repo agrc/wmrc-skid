@@ -145,13 +145,13 @@ class Skid:
 
         #: Do the work
 
-        #: Load data from Salesforce and generate analyses
+        #: Load data from Salesforce and generate analyses using Summarize methods
         self.skid_logger.info("Loading records from Salesforce...")
         records = self._load_salesforce_data()
-        facility_summary_df = self._facility_summaries(records).query("data_year == @config.YEAR")
-        county_summary_df = self._county_summaries(records)  # .query("data_year == @config.YEAR")
-        materials_recycled_df = self._materials_recycled(records)
-        materials_composted_df = self._materials_composted(records)
+        facility_summary_df = Summarize.facility_summaries(records).query("data_year == @config.YEAR")
+        county_summary_df = Summarize.county_summaries(records)  # .query("data_year == @config.YEAR")
+        materials_recycled_df = Summarize.materials_recycled(records)
+        materials_composted_df = Summarize.materials_composted(records)
 
         #: Facilities on map
         self.skid_logger.info("Updating facility info...")
@@ -163,25 +163,27 @@ class Skid:
 
         #: Materials recycled on dashboard:
         self.skid_logger.info("Updating materials recycled...")
-        materials_spatial = self._add_bogus_geometries(materials_recycled_df)
+        materials_spatial = helpers.add_bogus_geometries(materials_recycled_df)
         materials_spatial.rename(columns={"percent": "percent_"}, inplace=True)
         materials_loader = load.FeatureServiceUpdater(gis, config.MATERIALS_LAYER_ITEMID, self.tempdir_path)
         materials_count = materials_loader.truncate_and_load_features(materials_spatial)
 
         #:  Materials composted on dashboard:
         self.skid_logger.info("Updating materials composted...")
-        composting_spatial = self._add_bogus_geometries(materials_composted_df)
+        composting_spatial = helpers.add_bogus_geometries(materials_composted_df)
         composting_spatial.rename(columns={"percent": "percent_"}, inplace=True)
         composting_loader = load.FeatureServiceUpdater(gis, config.COMPOSTING_LAYER_ITEMID, self.tempdir_path)
         composting_count = composting_loader.truncate_and_load_features(composting_spatial)
 
         #: Statewide metrics
         self.skid_logger.info("Updating statewide metrics...")
-        statewide_totals_df = county_summary_df.groupby("data_year").apply(helpers.statewide_yearly_metrics)
-        contamination_rates_df = self._contamination_rates_by_tonnage(records)
-        # contamination_rates_df = self._contamination_rates_by_facility(records)
+        statewide_totals_df = county_summary_df.groupby("data_year").apply(
+            helpers.YearlyAnalysis.statewide_yearly_metrics
+        )
+        contamination_rates_df = Summarize.contamination_rates_by_tonnage(records)
+        # contamination_rates_df = Summaries._contamination_rates_by_facility(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
-        statewide_spatial = self._add_bogus_geometries(statewide_metrics)
+        statewide_spatial = helpers.add_bogus_geometries(statewide_metrics)
         statewide_loader = load.FeatureServiceUpdater(gis, config.STATEWIDE_LAYER_ITEMID, self.tempdir_path)
         statewide_count = statewide_loader.truncate_and_load_features(statewide_spatial)
 
@@ -341,9 +343,6 @@ class Skid:
 
         return joined_points_df
 
-    #: The following methods operate on all the salesforce data, while the SalesForceRecords class operates on subsets
-    #: of the data, usually a year at a time. Thus, these methods get all the records and then groupby them by year,
-    #: applying the SalesForceRecords methods.
     def _load_salesforce_data(self) -> helpers.SalesForceRecords:
 
         salesforce_credentials = extract.SalesforceApiUserCredentials(
@@ -356,11 +355,17 @@ class Skid:
 
         return salesforce_records
 
+
+class Summarize:
+    """These static methods generally apply functions from the helpers module to the records grouped by
+    Calender_Year__c to create dataframes of the reports that will be used to update the AGOL feature services.
+    """
+
     @staticmethod
-    def _county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
 
         county_df = records.df.groupby("Calendar_Year__c").apply(
-            helpers.county_summaries, county_fields=records.county_fields
+            helpers.YearlyAnalysis.county_summaries, county_fields=records.county_fields
         )
         county_df.index.names = ["data_year", "name"]
         county_df.reset_index(level="data_year", inplace=True)
@@ -373,11 +378,11 @@ class Skid:
         return county_df
 
     @staticmethod
-    def _facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
         facility_summaries = (
             records.df.groupby("Calendar_Year__c")
             .apply(
-                helpers.facility_tons_diverted_from_landfills,
+                helpers.YearlyAnalysis.facility_tons_diverted_from_landfills,
             )
             .droplevel(1)
         )
@@ -388,7 +393,7 @@ class Skid:
         return facility_summaries
 
     @staticmethod
-    def _materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
         recycling_fields = [
             "Combined Total of Material Received",
             "Total Corrugated Boxes received",
@@ -415,7 +420,7 @@ class Skid:
         materials_recycled = (
             records.df.groupby("Calendar_Year__c")
             .apply(
-                helpers.rates_per_material,
+                helpers.YearlyAnalysis.rates_per_material,
                 classification="Recycling",
                 fields=renamed_fields,
                 total_field="Combined_Total_of_Material_Received__c",
@@ -429,7 +434,7 @@ class Skid:
         return materials_recycled
 
     @staticmethod
-    def _materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
         composting_fields = [
             "Municipal Solid Waste",
             "Total Material Received Compost",
@@ -450,7 +455,7 @@ class Skid:
         materials_composted = (
             records.df.groupby("Calendar_Year__c")
             .apply(
-                helpers.rates_per_material,
+                helpers.YearlyAnalysis.rates_per_material,
                 classification="Composts",
                 fields=renamed_fields,
                 total_field="Total_Material_Received_Compost__c",
@@ -464,7 +469,7 @@ class Skid:
         return materials_composted
 
     @staticmethod
-    def _contamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def contamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.DataFrame:
         records.df["in_state_modifier"] = (100 - records.df["Out_of_State__c"]) / 100
         records.df["recycling_tons_contaminated"] = (
             records.df["Annual_Recycling_Contamination_Rate__c"]
@@ -493,33 +498,14 @@ class Skid:
 
         return clean_rates
 
-    def _contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    @staticmethod
+    def contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
 
         records.df["annual_recycling_uncontaminated_rate"] = 100 - records.df["Annual_Recycling_Contamination_Rate__c"]
         yearly_stats = records.df.groupby("Calendar_Year__c").describe()
         yearly_stats.index = yearly_stats.index.map(helpers.convert_to_int)
         yearly_stats.index.name = "data_year"
         return yearly_stats[["count", "mean", "std"]]
-
-    @staticmethod
-    def _add_bogus_geometries(input_dataframe: pd.DataFrame) -> pd.DataFrame:
-        """Add a bogus geometry (point in downtown Malad City, ID) to a dataframe in WKID 4326.
-
-        Args:
-            input_dataframe (pd.DataFrame): Non-spatial dataframe to add geometry to
-
-        Returns:
-            pd.DataFrame: Spatially-enabled dataframe version of input input_dataframe with geometry added to every row
-        """
-
-        input_dataframe["x"] = 12_495_000
-        input_dataframe["y"] = 5_188_000
-
-        spatial_dataframe = pd.DataFrame.spatial.from_xy(input_dataframe, "x", "y", sr=4326)
-
-        spatial_dataframe.drop(columns=["x", "y"], inplace=True)
-
-        return spatial_dataframe
 
 
 def main(event, context):  # pylint: disable=unused-argument

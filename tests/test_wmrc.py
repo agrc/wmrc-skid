@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 from wmrc import main
 
 
@@ -88,7 +89,7 @@ class TestSummaryMethods:
         )
         records_mock.df.groupby.return_value.apply.return_value = summaries_df
 
-        result_df = main.Skid._county_summaries(records_mock)
+        result_df = main.Summarize.county_summaries(records_mock)
 
         test_df = pd.DataFrame(
             {
@@ -123,7 +124,7 @@ class TestSummaryMethods:
         )
         records_mock.df.groupby.return_value.apply.return_value = summaries_df
 
-        result_df = main.Skid._county_summaries(records_mock)
+        result_df = main.Summarize.county_summaries(records_mock)
 
         test_df = pd.DataFrame(
             {
@@ -149,7 +150,7 @@ class TestSummaryMethods:
             }
         )
 
-        output_series = main.Skid._contamination_rates_by_tonnage(records)
+        output_series = main.Summarize.contamination_rates_by_tonnage(records)
 
         test_df = pd.Series(
             {
@@ -174,7 +175,7 @@ class TestSummaryMethods:
             }
         )
 
-        output_series = main.Skid._contamination_rates_by_tonnage(records)
+        output_series = main.Summarize.contamination_rates_by_tonnage(records)
 
         test_df = pd.Series(
             {
@@ -186,18 +187,3 @@ class TestSummaryMethods:
         test_df.index.name = "data_year"
 
         pd.testing.assert_series_equal(output_series, test_df)
-
-
-class TestSmallMethods:
-
-    def test_add_bogus_geometries_happy_path(self):
-        input_df = pd.DataFrame(
-            {
-                "a": [1, 2],
-                "b": [3, 4],
-            }
-        )
-
-        result_df = main.Skid._add_bogus_geometries(input_df)
-
-        assert result_df.spatial.validate()

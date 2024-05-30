@@ -139,7 +139,7 @@ class TestSummaryMethods:
 
         pd.testing.assert_frame_equal(result_df, test_df)
 
-    def test_contamination_rates_by_tonnage_happy_path(self, mocker):
+    def test_uncontamination_rates_by_tonnage_happy_path(self, mocker):
         records = mocker.Mock()
         records.df = pd.DataFrame(
             {
@@ -150,7 +150,7 @@ class TestSummaryMethods:
             }
         )
 
-        output_series = main.Summarize.contamination_rates_by_tonnage(records)
+        output_series = main.Summarize.uncontamination_rates_by_tonnage(records)
 
         test_df = pd.Series(
             {
@@ -163,7 +163,7 @@ class TestSummaryMethods:
 
         pd.testing.assert_series_equal(output_series, test_df)
 
-    def test_contamination_rates_by_tonnage_uses_out_of_state_modifier(self, mocker):
+    def test_uncontamination_rates_by_tonnage_uses_out_of_state_modifier(self, mocker):
         records = mocker.Mock()
         records.df = pd.DataFrame(
             {
@@ -175,7 +175,7 @@ class TestSummaryMethods:
             }
         )
 
-        output_series = main.Summarize.contamination_rates_by_tonnage(records)
+        output_series = main.Summarize.uncontamination_rates_by_tonnage(records)
 
         test_df = pd.Series(
             {

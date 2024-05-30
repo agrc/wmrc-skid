@@ -180,7 +180,7 @@ class Skid:
         statewide_totals_df = county_summary_df.groupby("data_year").apply(
             helpers.YearlyAnalysis.statewide_yearly_metrics
         )
-        contamination_rates_df = Summarize.contamination_rates_by_tonnage(records)
+        contamination_rates_df = Summarize.uncontamination_rates_by_tonnage(records)
         # contamination_rates_df = Summaries._contamination_rates_by_facility(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
         statewide_spatial = helpers.add_bogus_geometries(statewide_metrics)
@@ -215,7 +215,22 @@ class Skid:
         loggers = [logging.getLogger(config.SKID_NAME), logging.getLogger("palletjack")]
         self._remove_log_file_handlers(loggers)
 
-    def _update_counties(self, gis, county_summary_df):
+    def _update_counties(self, gis: arcgis.gis.GIS, county_summary_df: pd.DataFrame) -> int:
+        """Updates the live county summary data on AGOL with data from salesforce using another feature service as a geometry source.
+
+        Truncates and loads after merging the updated data with the geometries. Relies on
+        config.COUNTY_BOUNDARIES_ITEMID and config.COUNTY_LAYER_ITEMID to access these layers.
+
+        The geometry source layer needs to have an extra geometry placed somewhere out of the normal extent named "Out
+        of State" for capturing info about material from out of the state.
+
+        Args:
+            gis (arcgis.gis.GIS): AGOL org with both the live layer and the geometry source layer
+            county_summary_df (pd.DataFrame): The county summary report generated from Salesforce records
+
+        Returns:
+            int: Number of records updated.
+        """
 
         county_geoms = transform.FeatureServiceMerging.get_live_dataframe(gis, config.COUNTY_BOUNDARIES_ITEMID)[
             ["name", "SHAPE"]
@@ -230,7 +245,20 @@ class Skid:
         update_count = updater.truncate_and_load_features(new_data)
         return update_count
 
-    def _update_facilities(self, gis, facility_summary_df):
+    def _update_facilities(self, gis: arcgis.gis.GIS, facility_summary_df: pd.DataFrame) -> int:
+        """Updates the live facility data on AGOL with data from the Google sheets and Salesforce.
+
+        Truncates and loads after merging the live data with the updated data. Does not (currently) add new features.
+        Relies on config.FACILITIES_LAYER_ITEMID to access the live data. MSW facility info comes from the Google
+        sheet, while their total diverted comes from Salesforce. All UOCC data comes from the sheet.
+
+        Args:
+            gis (arcgis.gis.GIS): AGOL org with the live layer
+            facility_summary_df (pd.DataFrame): The facility summary report generated from Salesforce records
+
+        Returns:
+            int: Number of facilities loaded.
+        """
         self.skid_logger.info("Loading data from Google Sheets...")
         combined_df = self._parse_from_google_sheets()
         self.skid_logger.info("Adding county names from SGID county boundaries...")
@@ -242,6 +270,7 @@ class Skid:
             on="id_",
         )
 
+        #: NOTE: This .update() doesn't add new rows, so if a facility is added to the sheet it won't be added to the map
         #:  Merge live data with sheet/sf data
         live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FACILITIES_LAYER_ITEMID)
         updated_facility_data = live_facility_data.set_index("id_")
@@ -266,15 +295,19 @@ class Skid:
             ],
         )
 
-        # #: Fields from sheet that aren't in AGOL
-        # updated_facility_data.drop(columns=["local_health_department", "uocc_email_address"], inplace=True)
-
         self.skid_logger.info("Truncating and loading...")
         updater = load.FeatureServiceUpdater(gis, config.FACILITIES_LAYER_ITEMID, self.tempdir_path)
         load_count = updater.truncate_and_load_features(updated_facility_data)
         return load_count
 
-    def _parse_from_google_sheets(self):
+    def _parse_from_google_sheets(self) -> pd.DataFrame:
+        """Load MSW and UOCC data from Google Sheets and combine them into a single dataframe.
+
+        Does some field cleaning and aligns the UOCC columns with the MSW columns for consistency.
+
+        Returns:
+            pd.DataFrame: Single dataframe with the unified data from the two sheets
+        """
         #: Get individual sheets
         gsheet_extractor = extract.GSheetLoader(self.secrets.SERVICE_ACCOUNT_JSON)
         sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(
@@ -283,10 +316,7 @@ class Skid:
         uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(self.secrets.SHEET_ID, "UOCCs", by_title=True)
 
         #: Fix columns
-        try:
-            sw_df.drop(columns=[""], inplace=True)  #: Drop empty columns that don't have a name
-        except KeyError:
-            pass
+        sw_df.drop(columns=[""], inplace=True, errors="ignore")  #: Drop empty columns that don't have a name
 
         sw_df.rename(
             columns={"Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public"},
@@ -317,7 +347,17 @@ class Skid:
         return renamed_df
 
     @staticmethod
-    def _get_county_names(input_df, gis):
+    def _get_county_names(input_df: pd.DataFrame, gis: arcgis.gis.GIS) -> pd.DataFrame:
+        """Assigns a county name to each facility based on the SGID county boundaries hosted in AGOL.
+
+        Args:
+            input_df (pd.DataFrame): Facility dataframe with "latitude" and "longitude" columns
+            gis (arcgis.gis.GIS): AGOL org containing the county boundaries
+
+        Returns:
+            pd.DataFrame: A spatially-enabled dataframe of the facilities in WKID 26912 with county names added.
+        """
+
         #: Load counties from open data feature service
         counties_df = pd.DataFrame.spatial.from_layer(
             arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
@@ -344,6 +384,11 @@ class Skid:
         return joined_points_df
 
     def _load_salesforce_data(self) -> helpers.SalesForceRecords:
+        """Helper method to connect to and load data from Salesforce.
+
+        Returns:
+            helpers.SalesForceRecords: An object containing the records from Salesforce along with other derived data.
+        """
 
         salesforce_credentials = extract.SalesforceApiUserCredentials(
             self.secrets.SF_CLIENT_SECRET, self.secrets.SF_CLIENT_ID
@@ -363,6 +408,14 @@ class Summarize:
 
     @staticmethod
     def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        """Perform the county summary per year analysis on the Salesforce records.
+
+        Args:
+            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
+
+        Returns:
+            pd.DataFrame: County summary report indexed by county name with data_year column as integer
+        """
 
         county_df = records.df.groupby("Calendar_Year__c").apply(
             helpers.YearlyAnalysis.county_summaries, county_fields=records.county_fields
@@ -379,6 +432,15 @@ class Summarize:
 
     @staticmethod
     def facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        """Perform the facility summary per year analysis on the Salesforce records.
+
+        Args:
+            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
+
+        Returns:
+            pd.DataFrame: Facilities summary report with default index and data_year column as integer
+        """
+
         facility_summaries = (
             records.df.groupby("Calendar_Year__c")
             .apply(
@@ -394,6 +456,16 @@ class Summarize:
 
     @staticmethod
     def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        """Perform the materials recycled analysis per year on the Salesforce records.
+
+        Args:
+            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object. Relies on both df and
+                field_mapping attributes.
+
+        Returns:
+            pd.DataFrame: Materials recycled report with default index and year_ column as integer
+        """
+
         recycling_fields = [
             "Combined Total of Material Received",
             "Total Corrugated Boxes received",
@@ -435,6 +507,16 @@ class Summarize:
 
     @staticmethod
     def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        """Perform the materials composted per year analysis on the Salesforce records.
+
+        Args:
+            records (helpers.SalesForceRecords): Helper object containing the Salesforce records. Relies on both df and
+                field_mapping attributes.
+
+        Returns:
+            pd.DataFrame: Materials composted report with default index and year_ column as integer
+        """
+
         composting_fields = [
             "Municipal Solid Waste",
             "Total Material Received Compost",
@@ -469,19 +551,38 @@ class Summarize:
         return materials_composted
 
     @staticmethod
-    def contamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    def uncontamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
+        """Calculates a yearly uncontamination rate based on the Salesforce records.
+
+        Uncontamination rate is opposite of contaminated rate (5% contamination = 95% uncontaminated). Rate is
+        calculated by using the contamination rate to determine contaminated tonnage and comparing that to the total
+        tonnage handled by facilities reporting a contamination rate.
+
+        Args:
+            records (helpers.SalesForceRecords): Helper object containing the Salesforce records
+
+        Returns:
+            pd.Series: Uncontamination rates per year with index name data_year and series name
+                "annual_recycling_uncontaminated_rate"
+        """
+        #: First, create a modifier to account for material from out-of-state
         records.df["in_state_modifier"] = (100 - records.df["Out_of_State__c"]) / 100
+
+        #: Calculate contaminated tonnage
         records.df["recycling_tons_contaminated"] = (
             records.df["Annual_Recycling_Contamination_Rate__c"]
             / 100
             * records.df["Combined_Total_of_Material_Recycled__c"]
             * records.df["in_state_modifier"]
         )
+
+        #: Calculate total tonnage from facilities reporting a contamination rate
         records.df["recycling_tons_report_contamination_total"] = pd.NA
         records.df.loc[
             ~records.df["recycling_tons_contaminated"].isnull(), "recycling_tons_report_contamination_total"
         ] = (records.df["Combined_Total_of_Material_Recycled__c"] * records.df["in_state_modifier"])
 
+        #: Invert to get uncontaminated rate
         clean_rates = records.df.groupby("Calendar_Year__c").apply(
             lambda year_df: (
                 1
@@ -500,6 +601,16 @@ class Summarize:
 
     @staticmethod
     def contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        """Return average facility uncontamination rates by year by averaging the individual facility percentages.
+
+        Uncontamination rate is opposite of contaminated rate (5% contamination = 95% uncontaminated).
+
+        Args:
+            records (helpers.SalesForceRecords): Helper object containing the Salesforce records
+
+        Returns:
+            pd.DataFrame: Dataframe of count, mean, and std per year from .describe()
+        """
 
         records.df["annual_recycling_uncontaminated_rate"] = 100 - records.df["Annual_Recycling_Contamination_Rate__c"]
         yearly_stats = records.df.groupby("Calendar_Year__c").describe()

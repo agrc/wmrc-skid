@@ -313,7 +313,8 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
 
 
 def statewide_yearly_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate statewide yearly metrics for recycling, composting, digestion, and landfilling (RCDL).
+    """Calculate statewide yearly metrics for recycling, composting, digestion, and landfilling (RCDL), filtering out
+        out of state totals.
 
     Args:
         county_year_df (pd.DataFrame): Dataframe of county summaries for a given year with the RCDL metrics (can be
@@ -322,11 +323,14 @@ def statewide_yearly_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Statewide yearly metrics.
     """
+
+    in_state_only = county_year_df.drop(index="Out of State", errors="ignore")
+
     statewide_series = pd.Series()
-    statewide_series["statewide_msw_recycled"] = county_year_df["county_wide_msw_recycled"].sum()
-    statewide_series["statewide_msw_composted"] = county_year_df["county_wide_msw_composted"].sum()
-    statewide_series["statewide_msw_digested"] = county_year_df["county_wide_msw_digested"].sum()
-    statewide_series["statewide_msw_landfilled"] = county_year_df["county_wide_msw_landfilled"].sum()
+    statewide_series["statewide_msw_recycled"] = in_state_only["county_wide_msw_recycled"].sum()
+    statewide_series["statewide_msw_composted"] = in_state_only["county_wide_msw_composted"].sum()
+    statewide_series["statewide_msw_digested"] = in_state_only["county_wide_msw_digested"].sum()
+    statewide_series["statewide_msw_landfilled"] = in_state_only["county_wide_msw_landfilled"].sum()
     statewide_series["statewide_msw_recycling_rate"] = (
         (
             statewide_series["statewide_msw_recycled"]

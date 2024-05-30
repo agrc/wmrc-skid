@@ -367,7 +367,6 @@ class Skid:
         county_df.rename(
             index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True
         )
-        # county_df.index = county_df.index.apply(lambda x: x.replace("__c", "").replace("_", " "))
         county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
 
         return county_df
@@ -465,25 +464,19 @@ class Skid:
 
     @staticmethod
     def _contamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.DataFrame:
+        records.df["in_state_modifier"] = (100 - records.df["Out_of_State__c"]) / 100
         records.df["recycling_tons_contaminated"] = (
             records.df["Annual_Recycling_Contamination_Rate__c"]
             / 100
             * records.df["Combined_Total_of_Material_Recycled__c"]
+            * records.df["in_state_modifier"]
         )
         records.df["recycling_tons_report_contamination_total"] = pd.NA
         records.df.loc[
             ~records.df["recycling_tons_contaminated"].isnull(), "recycling_tons_report_contamination_total"
-        ] = records.df["Combined_Total_of_Material_Recycled__c"]
-        records.df[
-            [
-                "Combined_Total_of_Material_Recycled__c",
-                "Annual_Recycling_Contamination_Rate__c",
-                "recycling_tons_contaminated",
-                "recycling_tons_report_contamination_total",
-            ]
-        ].sort_values("Combined_Total_of_Material_Recycled__c", ascending=False).head(20)
+        ] = (records.df["Combined_Total_of_Material_Recycled__c"] * records.df["in_state_modifier"])
 
-        contamination_rates = records.df.groupby("Calendar_Year__c").apply(
+        clean_rates = records.df.groupby("Calendar_Year__c").apply(
             lambda year_df: (
                 1
                 - (
@@ -493,11 +486,11 @@ class Skid:
             )
             * 100
         )
-        contamination_rates.name = "annual_recycling_uncontaminated_rate"
-        contamination_rates.index.name = "data_year"
-        contamination_rates.index = contamination_rates.index.map(helpers.convert_to_int)
+        clean_rates.name = "annual_recycling_uncontaminated_rate"
+        clean_rates.index.name = "data_year"
+        clean_rates.index = clean_rates.index.map(helpers.convert_to_int)
 
-        return contamination_rates
+        return clean_rates
 
     def _contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
 

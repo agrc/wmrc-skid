@@ -102,6 +102,55 @@ class TestSummaryMethods:
 
         pd.testing.assert_frame_equal(result_df, test_df)
 
+    def test_contamination_rates_by_tonnage_happy_path(self, mocker):
+        records = mocker.Mock()
+        records.df = pd.DataFrame(
+            {
+                "Calendar_Year__c": [2022, 2022, 2023, 2023],
+                "Out_of_State__c": [0, 0, 0, 0],
+                "Annual_Recycling_Contamination_Rate__c": [10, 0, 10, 20],
+                "Combined_Total_of_Material_Recycled__c": [100, 100, 100, 100],
+            }
+        )
+
+        output_series = main.Skid._contamination_rates_by_tonnage(records)
+
+        test_df = pd.Series(
+            {
+                2022: 95.0,
+                2023: 85.0,
+            },
+            name="annual_recycling_uncontaminated_rate",
+        )
+        test_df.index.name = "data_year"
+
+        pd.testing.assert_series_equal(output_series, test_df)
+
+    def test_contamination_rates_by_tonnage_uses_out_of_state_modifier(self, mocker):
+        records = mocker.Mock()
+        records.df = pd.DataFrame(
+            {
+                "facility_name": ["foo", "bar", "foo", "bar"],
+                "Calendar_Year__c": [2022, 2022, 2023, 2023],
+                "Out_of_State__c": [0, 100, 0, 100],
+                "Annual_Recycling_Contamination_Rate__c": [10, 0, 10, 20],
+                "Combined_Total_of_Material_Recycled__c": [100, 100, 100, 100],
+            }
+        )
+
+        output_series = main.Skid._contamination_rates_by_tonnage(records)
+
+        test_df = pd.Series(
+            {
+                2022: 90.0,
+                2023: 90.0,
+            },
+            name="annual_recycling_uncontaminated_rate",
+        )
+        test_df.index.name = "data_year"
+
+        pd.testing.assert_series_equal(output_series, test_df)
+
 
 class TestSmallMethods:
 

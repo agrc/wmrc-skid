@@ -22,12 +22,13 @@ from supervisor.models import MessageDetails, Supervisor
 #: This makes it work when calling with just `python <file>`/installing via pip and in the gcf framework, where
 #: the relative imports fail because of how it's calling the function.
 try:
-    from . import config, helpers, summarize, version
+    from . import config, helpers, summarize, version, yearly
 except ImportError:
     import config
     import helpers
     import summarize
     import version
+    import yearly
 
 
 class Skid:
@@ -142,8 +143,8 @@ class Skid:
         #: Load data from Salesforce and generate analyses using Summarize methods
         self.skid_logger.info("Loading records from Salesforce...")
         records = self._load_salesforce_data()
-        facility_summary_df = summarize.facility_summaries(records).query("data_year == @config.YEAR")
-        county_summary_df = summarize.county_summaries(records)
+        facility_summary_df = summarize.facilities(records).query("data_year == @config.YEAR")
+        county_summary_df = summarize.counties(records)
         materials_recycled_df = summarize.materials_recycled(records)
         materials_composted_df = summarize.materials_composted(records)
 
@@ -171,9 +172,7 @@ class Skid:
 
         #: Statewide metrics
         self.skid_logger.info("Updating statewide metrics...")
-        statewide_totals_df = county_summary_df.groupby("data_year").apply(
-            helpers.YearlyAnalysis.statewide_yearly_metrics
-        )
+        statewide_totals_df = county_summary_df.groupby("data_year").apply(yearly.statewide_metrics)
         contamination_rates_df = summarize.recovery_rates_by_tonnage(records)
         # contamination_rates_df = Summaries._contamination_rates_by_facility(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)

@@ -22,10 +22,11 @@ from supervisor.models import MessageDetails, Supervisor
 #: This makes it work when calling with just `python <file>`/installing via pip and in the gcf framework, where
 #: the relative imports fail because of how it's calling the function.
 try:
-    from . import config, helpers, version
+    from . import config, helpers, summarize, version
 except ImportError:
     import config
     import helpers
+    import summarize
     import version
 
 
@@ -130,7 +131,7 @@ class Skid:
                     pass
 
     def process(self):
-        """The main function that does all the work."""
+        """The main method that does all the work."""
 
         #: Set up secrets, tempdir, supervisor, and logging
         start = datetime.now()
@@ -138,15 +139,13 @@ class Skid:
         #: Get our GIS object via the ArcGIS API for Python
         gis = arcgis.gis.GIS(config.AGOL_ORG, self.secrets.AGOL_USER, self.secrets.AGOL_PASSWORD)
 
-        #: Do the work
-
         #: Load data from Salesforce and generate analyses using Summarize methods
         self.skid_logger.info("Loading records from Salesforce...")
         records = self._load_salesforce_data()
-        facility_summary_df = Summarize.facility_summaries(records).query("data_year == @config.YEAR")
-        county_summary_df = Summarize.county_summaries(records)  # .query("data_year == @config.YEAR")
-        materials_recycled_df = Summarize.materials_recycled(records)
-        materials_composted_df = Summarize.materials_composted(records)
+        facility_summary_df = summarize.facility_summaries(records).query("data_year == @config.YEAR")
+        county_summary_df = summarize.county_summaries(records)
+        materials_recycled_df = summarize.materials_recycled(records)
+        materials_composted_df = summarize.materials_composted(records)
 
         #: Facilities on map
         self.skid_logger.info("Updating facility info...")
@@ -175,7 +174,7 @@ class Skid:
         statewide_totals_df = county_summary_df.groupby("data_year").apply(
             helpers.YearlyAnalysis.statewide_yearly_metrics
         )
-        contamination_rates_df = Summarize.uncontamination_rates_by_tonnage(records)
+        contamination_rates_df = summarize.recovery_rates_by_tonnage(records)
         # contamination_rates_df = Summaries._contamination_rates_by_facility(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
         statewide_spatial = helpers.add_bogus_geometries(statewide_metrics)
@@ -274,7 +273,6 @@ class Skid:
 
         #:  Truncate and load to AGOL
         self.skid_logger.info("Preparing data for truncate and load...")
-        # new_facility_data = with_counties_df.copy()
         updated_facility_data.spatial.project(4326)
         updated_facility_data.spatial.set_geometry("SHAPE")
         updated_facility_data.spatial.sr = {"wkid": 4326}
@@ -394,224 +392,6 @@ class Skid:
         salesforce_records.extract_data_from_salesforce()
 
         return salesforce_records
-
-
-class Summarize:
-    """These static methods generally apply functions from the helpers module to the records grouped by
-    Calender_Year__c to create dataframes of the reports that will be used to update the AGOL feature services.
-    """
-
-    @staticmethod
-    def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
-        """Perform the county summary per year analysis on the Salesforce records.
-
-        Args:
-            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
-
-        Returns:
-            pd.DataFrame: County summary report indexed by county name with data_year column as integer
-        """
-
-        county_df = records.df.groupby("Calendar_Year__c").apply(
-            helpers.YearlyAnalysis.county_summaries, county_fields=records.county_fields
-        )
-        county_df.index.names = ["data_year", "name"]
-        county_df.reset_index(level="data_year", inplace=True)
-        county_df.rename(
-            index={name: name.replace("__c", "").replace("_", " ") for name in county_df.index}, inplace=True
-        )
-        county_df["data_year"] = county_df["data_year"].apply(helpers.convert_to_int)
-        county_df.fillna(0, inplace=True)
-
-        return county_df
-
-    @staticmethod
-    def facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
-        """Perform the facility summary per year analysis on the Salesforce records.
-
-        Args:
-            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
-
-        Returns:
-            pd.DataFrame: Facilities summary report with default index and data_year column as integer
-        """
-
-        facility_summaries = (
-            records.df.groupby("Calendar_Year__c")
-            .apply(
-                helpers.YearlyAnalysis.facility_tons_diverted_from_landfills,
-            )
-            .droplevel(1)
-        )
-        facility_summaries.index.name = "data_year"
-        facility_summaries.reset_index(inplace=True)
-        facility_summaries["data_year"] = facility_summaries["data_year"].apply(helpers.convert_to_int)
-
-        return facility_summaries
-
-    @staticmethod
-    def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
-        """Perform the materials recycled analysis per year on the Salesforce records.
-
-        Args:
-            records (helpers.SalesForceRecords): Salesforce records loaded into a helper object. Relies on both df and
-                field_mapping attributes.
-
-        Returns:
-            pd.DataFrame: Materials recycled report with default index and year_ column as integer
-        """
-
-        recycling_fields = [
-            "Combined Total of Material Received",
-            "Total Corrugated Boxes received",
-            "Total Paper and Paperboard received",
-            "Total Plastic Materials received",
-            "Total Glass Materials received",
-            "Total Ferrous Metal Materials received",
-            "Total Aluminum Metal Materials received",
-            "Total Nonferrous Metal received",
-            "Total Rubber Materials received",
-            "Total Leather Materials received",
-            "Total Textile Materials received",
-            "Total Wood Materials received",
-            "Total Yard Trimmings received",
-            "Total Food received",
-            "Total Tires received",
-            "Total Lead-Acid Batteries received",
-            "Total Lithium-Ion Batteries received",
-            "Total Other Electronics received",
-            "Total ICD received",
-            "Total SW Stream Materials received",
-        ]
-        renamed_fields = [records.field_mapping[field] for field in recycling_fields if field in records.field_mapping]
-        materials_recycled = (
-            records.df.groupby("Calendar_Year__c")
-            .apply(
-                helpers.YearlyAnalysis.rates_per_material,
-                classification="Recycling",
-                fields=renamed_fields,
-                total_field="Combined_Total_of_Material_Received__c",
-            )
-            .droplevel(1)
-            .reset_index()
-            .rename(columns={"Calendar_Year__c": "year_"})
-        )
-        materials_recycled["year_"] = materials_recycled["year_"].apply(helpers.convert_to_int)
-
-        return materials_recycled
-
-    @staticmethod
-    def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
-        """Perform the materials composted per year analysis on the Salesforce records.
-
-        Args:
-            records (helpers.SalesForceRecords): Helper object containing the Salesforce records. Relies on both df and
-                field_mapping attributes.
-
-        Returns:
-            pd.DataFrame: Materials composted report with default index and year_ column as integer
-        """
-
-        composting_fields = [
-            "Municipal Solid Waste",
-            "Total Material Received Compost",
-            "Total Paper and Paperboard receiced (C)",
-            "Total Plastic Materials received (C)",
-            "Total Rubber Materials received (C)",
-            "Total Leather Materials received (C)",
-            "Total Textile Materials received (C)",
-            "Total Wood Materials received (C)",
-            "Total Yard Trimmings received (C)",
-            "Total Food received (C)",
-            "Total Agricultural Organics received",
-            "Total BFS received",
-            "Total Drywall received",
-            "Total Other CM received",
-        ]
-        renamed_fields = [records.field_mapping[field] for field in composting_fields if field in records.field_mapping]
-        materials_composted = (
-            records.df.groupby("Calendar_Year__c")
-            .apply(
-                helpers.YearlyAnalysis.rates_per_material,
-                classification="Composts",
-                fields=renamed_fields,
-                total_field="Total_Material_Received_Compost__c",
-            )
-            .droplevel(1)
-            .reset_index()
-            .rename(columns={"Calendar_Year__c": "year_"})
-        )
-        materials_composted["year_"] = materials_composted["year_"].apply(helpers.convert_to_int)
-
-        return materials_composted
-
-    @staticmethod
-    def uncontamination_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
-        """Calculates a yearly uncontamination rate based on the Salesforce records.
-
-        Uncontamination rate is opposite of contaminated rate (5% contamination = 95% uncontaminated). Rate is
-        calculated by using the contamination rate to determine contaminated tonnage and comparing that to the total
-        tonnage handled by facilities reporting a contamination rate.
-
-        Args:
-            records (helpers.SalesForceRecords): Helper object containing the Salesforce records
-
-        Returns:
-            pd.Series: Uncontamination rates per year with index name data_year and series name
-                "annual_recycling_uncontaminated_rate"
-        """
-        #: First, create a modifier to account for material from out-of-state
-        records.df["in_state_modifier"] = (100 - records.df["Out_of_State__c"]) / 100
-
-        #: Calculate contaminated tonnage
-        records.df["recycling_tons_contaminated"] = (
-            records.df["Annual_Recycling_Contamination_Rate__c"]
-            / 100
-            * records.df["Combined_Total_of_Material_Recycled__c"]
-            * records.df["in_state_modifier"]
-        )
-
-        #: Calculate total tonnage from facilities reporting a contamination rate
-        records.df["recycling_tons_report_contamination_total"] = pd.NA
-        records.df.loc[
-            ~records.df["recycling_tons_contaminated"].isnull(), "recycling_tons_report_contamination_total"
-        ] = (records.df["Combined_Total_of_Material_Recycled__c"] * records.df["in_state_modifier"])
-
-        #: Invert to get uncontaminated rate
-        clean_rates = records.df.groupby("Calendar_Year__c").apply(
-            lambda year_df: (
-                1
-                - (
-                    year_df["recycling_tons_contaminated"].sum()
-                    / year_df["recycling_tons_report_contamination_total"].sum()
-                )
-            )
-            * 100
-        )
-        clean_rates.name = "annual_recycling_uncontaminated_rate"
-        clean_rates.index.name = "data_year"
-        clean_rates.index = clean_rates.index.map(helpers.convert_to_int)
-
-        return clean_rates
-
-    @staticmethod
-    def contamination_rates_by_facility(records: helpers.SalesForceRecords) -> pd.DataFrame:
-        """Return average facility uncontamination rates by year by averaging the individual facility percentages.
-
-        Uncontamination rate is opposite of contaminated rate (5% contamination = 95% uncontaminated).
-
-        Args:
-            records (helpers.SalesForceRecords): Helper object containing the Salesforce records
-
-        Returns:
-            pd.DataFrame: Dataframe of count, mean, and std per year from .describe()
-        """
-
-        records.df["annual_recycling_uncontaminated_rate"] = 100 - records.df["Annual_Recycling_Contamination_Rate__c"]
-        yearly_stats = records.df.groupby("Calendar_Year__c").describe()
-        yearly_stats.index = yearly_stats.index.map(helpers.convert_to_int)
-        yearly_stats.index.name = "data_year"
-        return yearly_stats[["count", "mean", "std"]]
 
 
 def main(event, context):  # pylint: disable=unused-argument

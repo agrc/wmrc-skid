@@ -90,7 +90,7 @@ class SalesForceRecords:
 
         #: Get a dataframe of the first 200 rows with all the columns so we can extract the needed columns
         df_for_columns = self.salesforce_extractor.get_records(
-            "services/data/v60.0/query/", "SELECT FIELDS(ALL) from Application_Report__c LIMIT 200"
+            "services/data/v60.0/query/", "SELECT FIELDS(ALL) from Application_Report__c LIMIT 1"
         )
         self.county_fields = [col for col in df_for_columns.columns if "_County" in col]
         self.county_fields.append("Out_of_State__c")

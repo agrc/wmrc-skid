@@ -73,10 +73,6 @@ class Skid:
     def _initialize_supervisor(self):
         """A helper method to set up logging and supervisor
 
-        Args:
-            log_path (Path): File path for the logfile to be written
-            sendgrid_api_key (str): The API key for sendgrid for this particular application
-
         Returns:
             Supervisor: The supervisor object used for sending messages
         """
@@ -117,12 +113,11 @@ class Skid:
             )
         )
 
-    def _remove_log_file_handlers(self, loggers):
+    def _remove_log_file_handlers(self, loggers: list[str]):
         """A helper function to remove the file handlers so the tempdir will close correctly
 
         Args:
-            log_name (str): The logfiles filename
-            loggers (List<str>): The loggers that are writing to log_name
+            loggers (list[str]): The loggers that are writing to log_name
         """
 
         for logger in loggers:

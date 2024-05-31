@@ -4,7 +4,11 @@ Calender_Year__c to create dataframes of the reports that will be used to update
 
 import pandas as pd
 
-from wmrc import helpers, yearly
+try:
+    from wmrc import helpers, yearly
+except ImportError:
+    import helpers
+    import yearly
 
 
 def counties(records: helpers.SalesForceRecords) -> pd.DataFrame:

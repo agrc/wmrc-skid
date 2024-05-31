@@ -4,11 +4,10 @@ Calender_Year__c to create dataframes of the reports that will be used to update
 
 import pandas as pd
 
+from wmrc import helpers, yearly
 
-from . import helpers
 
-
-def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+def counties(records: helpers.SalesForceRecords) -> pd.DataFrame:
     """Perform the county summary per year analysis on the Salesforce records.
 
     Args:
@@ -19,7 +18,7 @@ def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
     """
 
     county_df = records.df.groupby("Calendar_Year__c").apply(
-        helpers.YearlyAnalysis.county_summaries, county_fields=records.county_fields
+        yearly.county_summaries, county_fields=records.county_fields
     )
     county_df.index.names = ["data_year", "name"]
     county_df.reset_index(level="data_year", inplace=True)
@@ -30,7 +29,7 @@ def county_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
     return county_df
 
 
-def facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
+def facilities(records: helpers.SalesForceRecords) -> pd.DataFrame:
     """Perform the facility summary per year analysis on the Salesforce records.
 
     Args:
@@ -43,7 +42,7 @@ def facility_summaries(records: helpers.SalesForceRecords) -> pd.DataFrame:
     facility_summaries = (
         records.df.groupby("Calendar_Year__c")
         .apply(
-            helpers.YearlyAnalysis.facility_tons_diverted_from_landfills,
+            yearly.facility_tons_diverted_from_landfills,
         )
         .droplevel(1)
     )
@@ -91,7 +90,7 @@ def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
     materials_recycled = (
         records.df.groupby("Calendar_Year__c")
         .apply(
-            helpers.YearlyAnalysis.rates_per_material,
+            yearly.rates_per_material,
             classification="Recycling",
             fields=renamed_fields,
             total_field="Combined_Total_of_Material_Received__c",
@@ -136,7 +135,7 @@ def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
     materials_composted = (
         records.df.groupby("Calendar_Year__c")
         .apply(
-            helpers.YearlyAnalysis.rates_per_material,
+            yearly.rates_per_material,
             classification="Composts",
             fields=renamed_fields,
             total_field="Total_Material_Received_Compost__c",

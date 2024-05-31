@@ -5,7 +5,7 @@ from wmrc import summarize
 
 class TestSummaryMethods:
 
-    def test_county_summaries_happy_path(self, mocker):
+    def test_counties_happy_path(self, mocker):
         records_mock = mocker.Mock()
         summaries_df = pd.DataFrame(
             {
@@ -25,7 +25,7 @@ class TestSummaryMethods:
         )
         records_mock.df.groupby.return_value.apply.return_value = summaries_df
 
-        result_df = summarize.county_summaries(records_mock)
+        result_df = summarize.counties(records_mock)
 
         test_df = pd.DataFrame(
             {
@@ -40,7 +40,7 @@ class TestSummaryMethods:
 
         pd.testing.assert_frame_equal(result_df, test_df)
 
-    def test_county_summaries_replace_nan_with_0(self, mocker):
+    def test_counties_replace_nan_with_0(self, mocker):
         records_mock = mocker.Mock()
         summaries_df = pd.DataFrame(
             {
@@ -60,7 +60,7 @@ class TestSummaryMethods:
         )
         records_mock.df.groupby.return_value.apply.return_value = summaries_df
 
-        result_df = summarize.county_summaries(records_mock)
+        result_df = summarize.counties(records_mock)
 
         test_df = pd.DataFrame(
             {

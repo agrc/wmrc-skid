@@ -68,12 +68,15 @@ class SalesForceRecords:
         Returns:
             str: A comma-delimited string of needed columns for the SOQL query
         """
+        additional_fields = [
+            "RecordTypeId",
+            "Classifications__c",
+            "RecordType.Name",
+            "Facility__r.Solid_Waste_Facility_ID_Number__c",
+            "LastModifiedDate",
+        ]
 
-        fields_string = ",".join(self.field_mapping.values())
-        fields_string += (
-            ",RecordTypeId,Classifications__c,RecordType.Name,Facility__r.Solid_Waste_Facility_ID_Number__c"
-        )
-        fields_string += "," + ",".join(self.county_fields)
+        fields_string = ",".join(list(self.field_mapping.values()) + additional_fields + self.county_fields)
 
         return fields_string
 
@@ -165,3 +168,30 @@ class SalesForceRecords:
 
         if missing_fields:
             raise ValueError(f"Missing fields: {missing_fields}")
+
+    def deduplicate_records_on_facility_id(self) -> Mapping[str, str]:
+        """Deduplicate all facilities' records, dropping all but the latest modified record per Calendar_Year__c.
+
+        Returns:
+            Mapping[str, str]: Dictionary of facility ids: calendar years that had duplicate records - {"SW0123":
+                "2022, 2023", etc}
+        """
+
+        #: {"SW0123": "2022, 2023", etc}
+        duplicated_facility_ids = {
+            facility_id: ", ".join(years)
+            for facility_id, years in self.df[
+                self.df.duplicated(subset=["facility_id", "Calendar_Year__c"], keep=False)
+            ]
+            .groupby("facility_id")["Calendar_Year__c"]
+            .unique()
+            .items()
+        }
+
+        #: Sort by last updated time and keep the most recent record
+        self.df["LastModifiedDate"] = pd.to_datetime(self.df["LastModifiedDate"])
+        self.df = self.df.sort_values("LastModifiedDate").drop_duplicates(
+            subset=["facility_id", "Calendar_Year__c"], keep="last"
+        )
+
+        return duplicated_facility_ids

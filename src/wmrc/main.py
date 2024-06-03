@@ -143,6 +143,7 @@ class Skid:
         #: Load data from Salesforce and generate analyses using Summarize methods
         self.skid_logger.info("Loading records from Salesforce...")
         records = self._load_salesforce_data()
+        duplicate_facility_ids = records.deduplicate_records_on_facility_id()
         facility_summary_df = summarize.facilities(records).query("data_year == @config.YEAR")
         county_summary_df = summarize.counties(records)
         materials_recycled_df = summarize.materials_recycled(records)
@@ -198,6 +199,9 @@ class Skid:
             f"Materials composted rows loaded: {composting_count}",
             f"Statewide metrics rows loaded: {statewide_count}",
         ]
+        if duplicate_facility_ids:
+            summary_rows.insert(7, "Duplicate facility IDs per calendar year:")
+            summary_rows.insert(8, "\t" + "\n\t".join(f"{k}: {v}" for k, v in duplicate_facility_ids.items()))
 
         summary_message.message = "\n".join(summary_rows)
         summary_message.attachments = self.tempdir_path / self.log_name

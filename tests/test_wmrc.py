@@ -1,4 +1,5 @@
 import pandas as pd
+
 from wmrc import main
 
 
@@ -63,3 +64,35 @@ class TestUpdateMethods:
         )
 
         pd.testing.assert_frame_equal(updater_mock.truncate_and_load_features.call_args[0][0], test_df)
+
+
+class TestCountyNamesMethod:
+
+    def test_get_county_names_handles_empty_str_lat_long(self, mocker):
+        spatial_mock = mocker.patch("wmrc.main.pd.DataFrame.spatial")
+        mocker.patch("wmrc.main.arcgis")
+
+        input_df = pd.DataFrame(
+            {
+                "foo": [1, 2, 3],
+                "latitude": ["", -111.1, -111.2],
+                "longitude": ["", 41.1, 41.2],
+            }
+        )
+
+        main.Skid._get_county_names(input_df, mocker.Mock())
+
+        df_without_empty = pd.DataFrame(
+            {
+                "foo": [2, 3],
+                "latitude": [-111.1, -111.2],
+                "longitude": [41.1, 41.2],
+            },
+            index=[1, 2],
+        )
+        df_without_empty["latitude"] = df_without_empty["latitude"].astype(object)
+        df_without_empty["longitude"] = df_without_empty["longitude"].astype(object)
+
+        # spatial_mock.from_xy.assert_called_once_with(df_without_empty, "longitude", "latitude")
+        assert spatial_mock.from_xy.call_count == 1
+        pd.testing.assert_frame_equal(spatial_mock.from_xy.call_args[0][0], df_without_empty)

@@ -361,6 +361,9 @@ class Skid:
         counties_df.spatial.sr = {"wkid": 26912}
 
         #: Convert dataframe to spatial
+        input_df = input_df[
+            input_df["latitude"].astype(bool) & input_df["longitude"].astype(bool)
+        ]  #: Drop empty lat/long
         spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column="longitude", y_column="latitude")
         spatial_df.reset_index(drop=True, inplace=True)
         spatial_df.spatial.project(26912)

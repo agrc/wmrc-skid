@@ -2,6 +2,7 @@
 
 import re
 
+import numpy as np
 import pandas as pd
 
 
@@ -106,6 +107,7 @@ def facility_tons_diverted_from_landfills(year_df: pd.DataFrame) -> pd.DataFrame
     subset_df = year_df[fields].copy()
 
     #: Sum any duplicate records for a single facility
+    #: NOTE: is this necessary now that records are deduplicated?
     sum_df = subset_df.groupby(["Facility_Name__c", "facility_id"]).sum().reset_index()
 
     sum_df["tons_of_material_diverted_from_"] = (
@@ -123,8 +125,8 @@ def facility_tons_diverted_from_landfills(year_df: pd.DataFrame) -> pd.DataFrame
     #: Extract just the number part of the facility id, strip leading zeros
     sum_df["id_"] = sum_df["facility_id"].astype(str).str[3:].str.lstrip("0")
 
-    #: Replace 0s with None for AGOL/Arcade logic
-    sum_df["tons_of_material_diverted_from_"] = sum_df["tons_of_material_diverted_from_"].replace(0, None)
+    #: Replace 0s with NaN for AGOL/Arcade logic (want to identify missing data as such, not as 0s)
+    sum_df["tons_of_material_diverted_from_"] = sum_df["tons_of_material_diverted_from_"].replace(0, np.nan)
 
     return sum_df[["Facility_Name__c", "id_", "tons_of_material_diverted_from_"]]
 

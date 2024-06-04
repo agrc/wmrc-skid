@@ -175,7 +175,6 @@ class Skid:
         self.skid_logger.info("Updating statewide metrics...")
         statewide_totals_df = county_summary_df.groupby("data_year").apply(yearly.statewide_metrics)
         contamination_rates_df = summarize.recovery_rates_by_tonnage(records)
-        # contamination_rates_df = Summaries._contamination_rates_by_facility(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
         statewide_spatial = helpers.add_bogus_geometries(statewide_metrics)
         statewide_loader = load.FeatureServiceUpdater(gis, config.STATEWIDE_LAYER_ITEMID, self.tempdir_path)
@@ -265,24 +264,27 @@ class Skid:
         google_and_sf_data = with_counties_df.merge(
             facility_summary_df[["id_", "tons_of_material_diverted_from_"]],
             on="id_",
+            how="left",
         )
+        google_and_sf_data["tons_of_material_diverted_from_"] = google_and_sf_data[
+            "tons_of_material_diverted_from_"
+        ].astype(str)
 
-        #: NOTE: This .update() doesn't add new rows, so if a facility is added to the sheet it won't be added to the map
-        #:  Merge live data with sheet/sf data
+        #: Subset down the columns to only the ones that are in the live data
         live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FACILITIES_LAYER_ITEMID)
-        updated_facility_data = live_facility_data.set_index("id_")
-        updated_facility_data.update(google_and_sf_data.set_index("id_"))
-        updated_facility_data.reset_index(inplace=True)
+        live_fields = live_facility_data.columns
+        common_fields = set(google_and_sf_data.columns).intersection(live_fields)
+        google_and_sf_data = google_and_sf_data[list(common_fields)]
 
         #:  Truncate and load to AGOL
         self.skid_logger.info("Preparing data for truncate and load...")
-        updated_facility_data.spatial.project(4326)
-        updated_facility_data.spatial.set_geometry("SHAPE")
-        updated_facility_data.spatial.sr = {"wkid": 4326}
-        updated_facility_data["last_updated"] = date.today()
-        updated_facility_data = transform.DataCleaning.switch_to_datetime(updated_facility_data, ["last_updated"])
-        updated_facility_data = transform.DataCleaning.switch_to_float(
-            updated_facility_data,
+        google_and_sf_data.spatial.project(4326)
+        google_and_sf_data.spatial.set_geometry("SHAPE")
+        google_and_sf_data.spatial.sr = {"wkid": 4326}
+        google_and_sf_data["last_updated"] = date.today()
+        google_and_sf_data = transform.DataCleaning.switch_to_datetime(google_and_sf_data, ["last_updated"])
+        google_and_sf_data = transform.DataCleaning.switch_to_float(
+            google_and_sf_data,
             [
                 "latitude",
                 "longitude",
@@ -293,7 +295,7 @@ class Skid:
 
         self.skid_logger.info("Truncating and loading...")
         updater = load.FeatureServiceUpdater(gis, config.FACILITIES_LAYER_ITEMID, self.tempdir_path)
-        load_count = updater.truncate_and_load_features(updated_facility_data)
+        load_count = updater.truncate_and_load_features(google_and_sf_data)
         return load_count
 
     def _parse_from_google_sheets(self) -> pd.DataFrame:

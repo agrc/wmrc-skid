@@ -22,8 +22,12 @@ except Exception:
 AGOL_ORG = "https://utahdeq.maps.arcgis.com"
 SENDGRID_SETTINGS = {  #: Settings for SendGridHandler
     "from_address": "noreply@utah.gov",
-    "to_addresses": ["jdadams@utah.gov"],
-    # "to_addresses": ["jdadams@utah.gov", "stevienorcross@utah.gov", "gerardorodriguez@utah.gov"],
+    "to_addresses": [
+        "jdadams@utah.gov",
+        "stevienorcross@utah.gov",
+        "gerardorodriguez@utah.gov",
+        "rachelboyer@utah.gov",
+    ],
     "prefix": f"{SKID_NAME} on {HOST_NAME}: ",
 }
 LOG_LEVEL = logging.DEBUG
@@ -31,8 +35,8 @@ LOG_FILE_NAME = "log"
 
 COUNTIES_ITEMID = "90431cac2f9f49f4bcf1505419583753"
 
-FACILITIES_LAYER_ITEMID = "4df06137fb0a45459e49107a5f47a326"  #: Beta version
-# FACILITIES_LAYER_ITEMID = "056bbc52ff3240f6b69666750a61aeff"  #: Live version
+# FACILITIES_LAYER_ITEMID = "4df06137fb0a45459e49107a5f47a326"  #: Beta version
+FACILITIES_LAYER_ITEMID = "056bbc52ff3240f6b69666750a61aeff"  #: Live version
 JOIN_COLUMN = "id_"
 
 COUNTY_LAYER_ITEMID = "ea80c3c34bb147fba462ea100179bf09"

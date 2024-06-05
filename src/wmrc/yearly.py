@@ -107,7 +107,7 @@ def facility_tons_diverted_from_landfills(year_df: pd.DataFrame) -> pd.DataFrame
     subset_df = year_df[fields].copy()
 
     #: Sum any duplicate records for a single facility
-    #: NOTE: is this necessary now that records are deduplicated?
+    #: NOTE: May be necessary now that records are deduplicated, leave for now
     sum_df = subset_df.groupby(["Facility_Name__c", "facility_id"]).sum().reset_index()
 
     sum_df["tons_of_material_diverted_from_"] = (

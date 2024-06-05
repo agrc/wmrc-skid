@@ -315,7 +315,6 @@ class Skid:
 
         #: Fix columns
         sw_df.drop(columns=[""], inplace=True, errors="ignore")  #: Drop empty columns that don't have a name
-
         sw_df.rename(
             columns={"Accept Material\n Dropped \n Off by the Public": "Accept Material Dropped Off by the Public"},
             inplace=True,

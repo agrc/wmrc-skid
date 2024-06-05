@@ -1,4 +1,4 @@
-"""These functions generally apply functions from the helpers module to the records grouped by
+"""These functions generally apply functions from the yearly module to the records grouped by
 Calender_Year__c to create dataframes of the reports that will be used to update the AGOL feature services.
 """
 
@@ -156,7 +156,7 @@ def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
 def recovery_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
     """Calculates a yearly recovery rate based on the Salesforce records.
 
-    recovery rate is opposite of contaminated rate (5% contamination = 95% uncontaminated). Rate is
+    Recovery rate is opposite of contaminated rate (5% contamination = 95% uncontaminated). Rate is
     calculated by using the contamination rate to determine contaminated tonnage and comparing that to the total
     tonnage handled by facilities reporting a contamination rate.
 

@@ -276,6 +276,11 @@ class Skid:
         common_fields = set(google_and_sf_data.columns).intersection(live_fields)
         google_and_sf_data = google_and_sf_data[list(common_fields)]
 
+        #: Calculate the filter field so that MRFs are under Recycling Facilities
+        google_and_sf_data["type_filter"] = google_and_sf_data["facility_type"].apply(
+            lambda x: "Recycling Facility" if x == "Recycling Facility - MRF" else x
+        )
+
         #:  Truncate and load to AGOL
         self.skid_logger.info("Preparing data for truncate and load...")
         google_and_sf_data.spatial.project(4326)

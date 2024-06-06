@@ -134,7 +134,6 @@ class Skid:
     def process(self):
         """The main method that does all the work."""
 
-        #: Set up secrets, tempdir, supervisor, and logging
         start = datetime.now()
 
         #: Get our GIS object via the ArcGIS API for Python

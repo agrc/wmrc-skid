@@ -269,6 +269,14 @@ class Skid:
             "tons_of_material_diverted_from_"
         ].astype(str)
 
+        #: TODO: debug and check this before and after to make sure the update is coming through. Check the phone number format for ID 95. I changed the google sheet to (xxx) yyy-zzzz from the xxxyyyzzzz in salesforce.
+        #: Update to overwrite the website, phone, and accept values originally from the sheet from Salesforce instead
+        google_and_sf_data.set_index("id_", inplace=True)
+        google_and_sf_data.update(
+            facility_summary_df[["id_", "website", "phone_no", "accept_material_dropped_off_by_"]].set_index("id_")
+        )
+        google_and_sf_data.reset_index(inplace=True)
+
         #: Subset down the columns to only the ones that are in the live data
         live_facility_data = transform.FeatureServiceMerging.get_live_dataframe(gis, config.FACILITIES_LAYER_ITEMID)
         live_fields = live_facility_data.columns

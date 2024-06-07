@@ -53,8 +53,45 @@ def facilities(records: helpers.SalesForceRecords) -> pd.DataFrame:
     facility_summaries.index.name = "data_year"
     facility_summaries.reset_index(inplace=True)
     facility_summaries["data_year"] = facility_summaries["data_year"].apply(helpers.convert_to_int)
+    facility_summaries = _add_facility_info(facility_summaries, records)
 
     return facility_summaries
+
+
+def _add_facility_info(facility_df: pd.DataFrame, records: helpers.SalesForceRecords) -> pd.DataFrame:
+    """Add facility information to the facility summary based on the record with the most recent LastModifiedDate.
+
+    Args:
+        facility_df (pd.DataFrame): Facility summary report with LastModifiedDate as datetime
+        records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
+
+    Returns:
+        pd.DataFrame: Facility summary report with facility information added
+    """
+
+    latest_records = records.df.loc[records.df.groupby("facility_id")["LastModifiedDate"].idxmax()].reset_index()[
+        ["facility_id", "Are_materials_accepted_for_drop_off__c", "Facility_Phone_Number__c", "Facility_Website__c"]
+    ]
+
+    latest_records["id_"] = latest_records["facility_id"].astype(str).str[3:].str.lstrip("0")
+    latest_records.drop(columns="facility_id", inplace=True)
+    latest_records.rename(
+        columns={
+            "Are_materials_accepted_for_drop_off__c": "accept_material_dropped_off_by_",
+            "Facility_Phone_Number__c": "phone_no",
+            "Facility_Website__c": "website",
+        },
+        inplace=True,
+    )
+
+    facility_df = facility_df.merge(
+        latest_records,
+        left_on="id_",
+        right_on="id_",
+        how="left",
+    )
+
+    return facility_df
 
 
 def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:

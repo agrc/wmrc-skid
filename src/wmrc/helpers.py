@@ -74,6 +74,9 @@ class SalesForceRecords:
             "RecordType.Name",
             "Facility__r.Solid_Waste_Facility_ID_Number__c",
             "LastModifiedDate",
+            "Are_materials_accepted_for_drop_off__c",
+            "Facility_Phone_Number__c",
+            "Facility_Website__c",
         ]
 
         fields_string = ",".join(list(self.field_mapping.values()) + additional_fields + self.county_fields)

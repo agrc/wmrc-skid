@@ -123,3 +123,126 @@ class TestSummaryMethods:
         test_df.index.name = "data_year"
 
         pd.testing.assert_series_equal(output_series, test_df)
+
+
+class TestAddFacilityInfo:
+
+    def test_add_facility_info_simple_no_duplicates(self, mocker):
+        records_mock = mocker.Mock()
+        records_mock.df = pd.DataFrame(
+            {
+                "LastModifiedDate": [
+                    pd.Timestamp("2022-01-01"),
+                    pd.Timestamp("2022-01-01"),
+                    pd.Timestamp("2022-01-01"),
+                ],
+                "facility_id": ["SW0123", "SW0124", "SW0125"],
+                "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
+                "Facility_Phone_Number__c": ["123-456-7890", "234-567-8901", "345-678-9012"],
+                "Facility_Website__c": ["http://foo.com", "http://bar.com", "http://baz.com"],
+            }
+        )
+        records_mock.df["LastModifiedDate"] = pd.to_datetime(records_mock.df["LastModifiedDate"])
+
+        facility_df = pd.DataFrame(
+            {
+                "id_": ["123", "124", "125"],
+                "Facility_Name__c": ["foo", "bar", "baz"],
+                "tons_of_material_diverted_from_": [1, 2, 3],
+            }
+        )
+
+        output_df = summarize._add_facility_info(facility_df, records_mock)
+
+        expected_df = pd.DataFrame(
+            {
+                "id_": ["123", "124", "125"],
+                "Facility_Name__c": ["foo", "bar", "baz"],
+                "tons_of_material_diverted_from_": [1, 2, 3],
+                "accept_material_dropped_off_by_": ["Yes", "No", "Yes"],
+                "phone_no": ["123-456-7890", "234-567-8901", "345-678-9012"],
+                "website": ["http://foo.com", "http://bar.com", "http://baz.com"],
+            }
+        )
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_add_facility_info_uses_latest_info(self, mocker):
+        records_mock = mocker.Mock()
+        records_mock.df = pd.DataFrame(
+            {
+                "LastModifiedDate": [
+                    pd.Timestamp("2022-01-01"),
+                    pd.Timestamp("2022-10-01"),
+                    pd.Timestamp("2022-01-01"),
+                ],
+                "facility_id": ["SW0123", "SW0123", "SW0124"],
+                "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
+                "Facility_Phone_Number__c": ["123-456-7890", "123-456-7890", "345-678-9012"],
+                "Facility_Website__c": ["http://foo.com", "http://foo.com", "http://baz.com"],
+            }
+        )
+        records_mock.df["LastModifiedDate"] = pd.to_datetime(records_mock.df["LastModifiedDate"])
+
+        facility_df = pd.DataFrame(
+            {
+                "id_": ["123", "124"],
+                "Facility_Name__c": ["foo", "bar"],
+                "tons_of_material_diverted_from_": [1, 2],
+            }
+        )
+
+        output_df = summarize._add_facility_info(facility_df, records_mock)
+
+        expected_df = pd.DataFrame(
+            {
+                "id_": ["123", "124"],
+                "Facility_Name__c": ["foo", "bar"],
+                "tons_of_material_diverted_from_": [1, 2],
+                "accept_material_dropped_off_by_": ["No", "Yes"],
+                "phone_no": ["123-456-7890", "345-678-9012"],
+                "website": ["http://foo.com", "http://baz.com"],
+            }
+        )
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_add_facility_info_uses_out_of_order_latest_info(self, mocker):
+        records_mock = mocker.Mock()
+        records_mock.df = pd.DataFrame(
+            {
+                "LastModifiedDate": [
+                    pd.Timestamp("2022-10-01"),
+                    pd.Timestamp("2022-01-01"),
+                    pd.Timestamp("2022-01-01"),
+                ],
+                "facility_id": ["SW0123", "SW0123", "SW0124"],
+                "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
+                "Facility_Phone_Number__c": ["123-456-7890", "123-456-7890", "345-678-9012"],
+                "Facility_Website__c": ["http://foo.com", "http://foo.com", "http://baz.com"],
+            }
+        )
+        records_mock.df["LastModifiedDate"] = pd.to_datetime(records_mock.df["LastModifiedDate"])
+
+        facility_df = pd.DataFrame(
+            {
+                "id_": ["123", "124"],
+                "Facility_Name__c": ["foo", "bar"],
+                "tons_of_material_diverted_from_": [1, 2],
+            }
+        )
+
+        output_df = summarize._add_facility_info(facility_df, records_mock)
+
+        expected_df = pd.DataFrame(
+            {
+                "id_": ["123", "124"],
+                "Facility_Name__c": ["foo", "bar"],
+                "tons_of_material_diverted_from_": [1, 2],
+                "accept_material_dropped_off_by_": ["Yes", "Yes"],
+                "phone_no": ["123-456-7890", "345-678-9012"],
+                "website": ["http://foo.com", "http://baz.com"],
+            }
+        )
+
+        pd.testing.assert_frame_equal(output_df, expected_df)

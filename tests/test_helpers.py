@@ -1,5 +1,4 @@
 import pandas as pd
-
 from wmrc import helpers
 
 
@@ -33,7 +32,7 @@ class TestSalesForceRecords:
 
         assert (
             result
-            == "b,d,RecordTypeId,Classifications__c,RecordType.Name,Facility__r.Solid_Waste_Facility_ID_Number__c,LastModifiedDate,foo,bar"
+            == "b,d,RecordTypeId,Classifications__c,RecordType.Name,Facility__r.Solid_Waste_Facility_ID_Number__c,LastModifiedDate,Are_materials_accepted_for_drop_off__c,Facility_Phone_Number__c,Facility_Website__c,foo,bar"
         )
 
     def test_deduplicate_records_on_facility_id_single_year(self, mocker):

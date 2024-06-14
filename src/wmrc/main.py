@@ -269,11 +269,12 @@ class Skid:
             "tons_of_material_diverted_from_"
         ].astype(str)
 
-        #: TODO: debug and check this before and after to make sure the update is coming through. Check the phone number format for ID 95. I changed the google sheet to (xxx) yyy-zzzz from the xxxyyyzzzz in salesforce.
-        #: Update to overwrite the website, phone, and accept values originally from the sheet from Salesforce instead
+        #: Update to overwrite the name, website, phone, and accept values on the sheet from Salesforce instead
         google_and_sf_data.set_index("id_", inplace=True)
         google_and_sf_data.update(
-            facility_summary_df[["id_", "website", "phone_no", "accept_material_dropped_off_by_"]].set_index("id_")
+            facility_summary_df[
+                ["id_", "website", "phone_no_", "accept_material_dropped_off_by_", "facility_name"]
+            ].set_index("id_")
         )
         google_and_sf_data.reset_index(inplace=True)
 

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 from wmrc import summarize
 
 
@@ -136,6 +137,7 @@ class TestAddFacilityInfo:
                     pd.Timestamp("2022-01-01"),
                     pd.Timestamp("2022-01-01"),
                 ],
+                "Facility_Name__c": ["foo", "bar", "baz"],
                 "facility_id": ["SW0123", "SW0124", "SW0125"],
                 "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
                 "Facility_Phone_Number__c": ["123-456-7890", "234-567-8901", "345-678-9012"],
@@ -157,11 +159,11 @@ class TestAddFacilityInfo:
         expected_df = pd.DataFrame(
             {
                 "id_": ["123", "124", "125"],
-                "Facility_Name__c": ["foo", "bar", "baz"],
                 "tons_of_material_diverted_from_": [1, 2, 3],
                 "accept_material_dropped_off_by_": ["Yes", "No", "Yes"],
-                "phone_no": ["123-456-7890", "234-567-8901", "345-678-9012"],
+                "phone_no_": ["123-456-7890", "234-567-8901", "345-678-9012"],
                 "website": ["http://foo.com", "http://bar.com", "http://baz.com"],
+                "facility_name": ["foo", "bar", "baz"],
             }
         )
 
@@ -176,6 +178,7 @@ class TestAddFacilityInfo:
                     pd.Timestamp("2022-10-01"),
                     pd.Timestamp("2022-01-01"),
                 ],
+                "Facility_Name__c": ["foo", "Foo", "baz"],
                 "facility_id": ["SW0123", "SW0123", "SW0124"],
                 "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
                 "Facility_Phone_Number__c": ["123-456-7890", "123-456-7890", "345-678-9012"],
@@ -187,7 +190,7 @@ class TestAddFacilityInfo:
         facility_df = pd.DataFrame(
             {
                 "id_": ["123", "124"],
-                "Facility_Name__c": ["foo", "bar"],
+                "Facility_Name__c": ["foo", "baz"],
                 "tons_of_material_diverted_from_": [1, 2],
             }
         )
@@ -197,11 +200,11 @@ class TestAddFacilityInfo:
         expected_df = pd.DataFrame(
             {
                 "id_": ["123", "124"],
-                "Facility_Name__c": ["foo", "bar"],
                 "tons_of_material_diverted_from_": [1, 2],
                 "accept_material_dropped_off_by_": ["No", "Yes"],
-                "phone_no": ["123-456-7890", "345-678-9012"],
+                "phone_no_": ["123-456-7890", "345-678-9012"],
                 "website": ["http://foo.com", "http://baz.com"],
+                "facility_name": ["Foo", "baz"],
             }
         )
 
@@ -216,6 +219,7 @@ class TestAddFacilityInfo:
                     pd.Timestamp("2022-01-01"),
                     pd.Timestamp("2022-01-01"),
                 ],
+                "Facility_Name__c": ["foo", "Foo", "baz"],
                 "facility_id": ["SW0123", "SW0123", "SW0124"],
                 "Are_materials_accepted_for_drop_off__c": ["Yes", "No", "Yes"],
                 "Facility_Phone_Number__c": ["123-456-7890", "123-456-7890", "345-678-9012"],
@@ -227,7 +231,7 @@ class TestAddFacilityInfo:
         facility_df = pd.DataFrame(
             {
                 "id_": ["123", "124"],
-                "Facility_Name__c": ["foo", "bar"],
+                "Facility_Name__c": ["Foo", "bar"],
                 "tons_of_material_diverted_from_": [1, 2],
             }
         )
@@ -237,11 +241,11 @@ class TestAddFacilityInfo:
         expected_df = pd.DataFrame(
             {
                 "id_": ["123", "124"],
-                "Facility_Name__c": ["foo", "bar"],
                 "tons_of_material_diverted_from_": [1, 2],
                 "accept_material_dropped_off_by_": ["Yes", "Yes"],
-                "phone_no": ["123-456-7890", "345-678-9012"],
+                "phone_no_": ["123-456-7890", "345-678-9012"],
                 "website": ["http://foo.com", "http://baz.com"],
+                "facility_name": ["foo", "baz"],
             }
         )
 

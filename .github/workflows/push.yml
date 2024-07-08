@@ -80,7 +80,7 @@ jobs:
         uses: google-github-actions/deploy-cloud-functions@v3
         timeout-minutes: 10
         with:
-          name: wmrc-skid
+          name: wmrc-skid-g2
           runtime: python311
           entry_point: main
           source_dir: src/wmrc

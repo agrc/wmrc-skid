@@ -85,7 +85,7 @@ jobs:
           entry_point: main
           source_dir: src/wmrc
           service_account: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
-          event_trigger_type: providers/cloud.pubsub/eventTypes/topic.publish
+          event_trigger_type: google.cloud.pubsub.topic.v1.messagePublished
           event_trigger_pubsub_topic: projects/${{ secrets.PROJECT_ID }}/topics/${{ env.SCHEDULE_NAME }}-topic
           memory: ${{ env.CLOUD_FUNCTION_MEMORY }}
           service_timeout: ${{ env.CLOUD_FUNCTION_RUN_TIMEOUT }}

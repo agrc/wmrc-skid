@@ -40,7 +40,6 @@ setup(
     install_requires=[
         "ugrc-palletjack>=4.1,<4.5",
         "agrc-supervisor==3.0.3",
-        "requests<2.32,",  #: 2.32 has issues with arcgis
         "google-cloud-storage==2.16.*",
     ],
     extras_require={
@@ -52,7 +51,7 @@ setup(
             "pytest-watch==4.*",
             "pytest>=6,<8",
             "black>=23.3,<23.12",
-            "ruff==0.0.*",
+            "ruff==0.*",
             "functions-framework==3.4.*",
         ]
     },

@@ -92,6 +92,7 @@ jobs:
           environment_variables: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secrets: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
+          max_instance_count: 1
 
       - name: 📥 Create PubSub topic
         run: |
@@ -164,6 +165,7 @@ jobs:
           environment_variables: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
           secrets: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
+          max_instance_count: 1
 
       - name: 📥 Create PubSub topic
         run: |

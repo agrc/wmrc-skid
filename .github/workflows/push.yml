@@ -93,6 +93,7 @@ jobs:
           secrets: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
           max_instance_count: 1
+          event_trigger_retry: false
 
       - name: 📥 Create PubSub topic
         run: |
@@ -166,6 +167,7 @@ jobs:
           secrets: |
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
           max_instance_count: 1
+          event_trigger_retry: false
 
       - name: 📥 Create PubSub topic
         run: |

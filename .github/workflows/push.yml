@@ -78,7 +78,7 @@ jobs:
       - name: 🚀 Deploy to Cloud Function
         id: deploy
         uses: google-github-actions/deploy-cloud-functions@v3
-        timeout-minutes: 10
+        timeout-minutes: 15
         with:
           name: wmrc-skid-g2
           runtime: python311

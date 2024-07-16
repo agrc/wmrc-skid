@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-
 from wmrc import summarize
 
 
@@ -250,3 +249,38 @@ class TestAddFacilityInfo:
         )
 
         pd.testing.assert_frame_equal(output_df, expected_df)
+
+
+class TestFacilityMetrics:
+
+    def test_facility_metrics_happy_path(self, mocker):
+        input_df = pd.DataFrame(
+            {
+                "Calendar_Year__c": [2022, 2023, 2022],
+                "Facility_Name__c": ["foo", "foo", "baz"],
+                "facility_id": ["SW01", "SW01", "SW03"],
+                "Municipal_Solid_Waste__c": [10, 50, 100],
+                "Combined_Total_of_Material_Recycled__c": [10, 10, 20],
+                "Total_Materials_sent_to_composting__c": [0, 0, 50],
+                "Total_Material_managed_by_ADC__c": [10, 0, 0],
+                "Municipal_Waste_In_State_in_Tons__c": [80, 90, 30],
+            }
+        )
+        sf_records = mocker.Mock()
+        sf_records.df = input_df
+
+        expected_output = pd.DataFrame(
+            {
+                "data_year": [2022, 2022, 2023],
+                "id": ["SW01", "SW03", "SW01"],
+                "name": ["foo", "baz", "foo"],
+                "msw_recycled": [1.0, 20.0, 5.0],
+                "msw_composted": [0.0, 50.0, 0.0],
+                "msw_digested": [1.0, 0.0, 0.0],
+                "msw_landfilled": [80, 30, 90],
+            }
+        )
+
+        output = summarize.facility_metrics(sf_records)
+
+        pd.testing.assert_frame_equal(expected_output, output)

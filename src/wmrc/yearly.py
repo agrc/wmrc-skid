@@ -210,3 +210,27 @@ def statewide_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return statewide_series
+
+
+def facility_combined_metrics(year_df: pd.DataFrame) -> pd.DataFrame:
+    """Get the recycled, composting, digested, and landfilled (RCDL) tons for each facility.
+
+    Args:
+        year_df (pd.DataFrame): Dataframe of facility records for a single year (can be applied to a groupby(year)
+            object).
+
+    Returns:
+        pd.DataFrame: Facility id, name, and tons of material recycled, composted, digested, and landfilled.
+    """
+
+    msw_modifier = year_df["Municipal_Solid_Waste__c"] / 100
+
+    stats_df = pd.DataFrame()
+    stats_df["id"] = year_df["facility_id"]
+    stats_df["name"] = year_df["Facility_Name__c"]
+    stats_df["msw_recycled"] = msw_modifier * year_df["Combined_Total_of_Material_Recycled__c"]
+    stats_df["msw_composted"] = msw_modifier * year_df["Total_Materials_sent_to_composting__c"]
+    stats_df["msw_digested"] = msw_modifier * year_df["Total_Material_managed_by_ADC__c"]
+    stats_df["msw_landfilled"] = year_df["Municipal_Waste_In_State_in_Tons__c"]
+
+    return stats_df

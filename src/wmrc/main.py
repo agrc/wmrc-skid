@@ -302,7 +302,7 @@ class Skid:
                 "latitude",
                 "longitude",
                 "tons_of_material_diverted_from_",
-                "gallons_of_used_oil_collected_for_recycling_last_year",
+                "gallons_of_used_oil_collected_f",
             ],
         )
 
@@ -349,6 +349,7 @@ class Skid:
                     "longitude_": "longitude",
                     "accept_material_dropped_off_by_the_public": "accept_material_dropped_off_by_",
                     "tons_of_material_diverted_from_landfills_last_year": "tons_of_material_diverted_from_",
+                    "gallons_of_used_oil_collected_for_recycling_last_year": "gallons_of_used_oil_collected_f",
                 }
             )
         )

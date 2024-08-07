@@ -1,10 +1,8 @@
 import pandas as pd
 from toolz import interleave
 
-try:
-    from wmrc import yearly
-except ImportError:
-    import yearly
+from wmrc import summarize, yearly
+from wmrc.main import Skid
 
 
 def state_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.DataFrame:
@@ -22,9 +20,9 @@ def state_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.DataF
     """
 
     state_metrics = county_df.groupby("data_year").apply(yearly.statewide_metrics).reset_index()
-    state_metrics["name"] = "State"
+    state_metrics["name"] = "Statewide"
     state_metrics = state_metrics.set_index(["data_year", "name"])
-    state_metrics = state_metrics.drop(columns="statewide_msw_recycling_rate", axis=1)
+    # state_metrics = state_metrics.drop(columns="statewide_msw_recycling_rate", axis=1)
 
     return _year_over_year_changes(state_metrics, current_year)
 
@@ -33,7 +31,7 @@ def county_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.Data
     """Calculate year-over-year comparison for each county.
 
     Args:
-        county_df (pd.DataFrame): Dataframe with county data, indexed by year and county name. Must have columns for
+        county_df (pd.DataFrame): Dataframe with "data_year" and "name" columns. Must have columns for
             each metric to compare. Expects a "county_wide_msw_recycling_rate" column (which will be dropped).
         current_year (int): The year to compare changes from the previous year.
 
@@ -43,7 +41,7 @@ def county_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.Data
     """
 
     county_summary_by_year = county_df.reset_index().set_index(["data_year", "name"])
-    county_summary_by_year = county_summary_by_year.drop(columns="county_wide_msw_recycling_rate", axis=1)
+    # county_summary_by_year = county_summary_by_year.drop(columns="county_wide_msw_recycling_rate", axis=1)
 
     return _year_over_year_changes(county_summary_by_year, current_year)
 
@@ -106,3 +104,28 @@ def _year_over_year_changes(metrics_df: pd.DataFrame, current_year: int) -> pd.D
     return everything[
         list(interleave([pct_change.columns, values_current_year.columns, values_previous_year.columns, diffs.columns]))
     ]
+
+
+def run_validations():
+
+    wmrc_skid = Skid()
+    records = wmrc_skid._load_salesforce_data()
+    _ = records.deduplicate_records_on_facility_id()
+    facility_summary_df = summarize.facility_metrics(records)
+    county_summary_df = summarize.counties(records)
+
+    facility_changes = facility_year_over_year(facility_summary_df, 2023)
+    county_changes = county_year_over_year(county_summary_df, 2023)
+    state_changes = state_year_over_year(county_summary_df, 2023)
+
+    county_changes.rename(
+        columns={col: col.replace("county_wide_", "") for col in county_changes.columns}, inplace=True
+    )
+    state_changes.rename(columns={col: col.replace("statewide_", "") for col in state_changes.columns}, inplace=True)
+
+    all_changes = pd.concat([facility_changes, county_changes, state_changes], axis=0)
+    all_changes.to_csv(r"c:\gis\projects\wmrc\data\from_sf\validation_1.csv")
+
+
+if __name__ == "__main__":
+    run_validations()

@@ -1,4 +1,5 @@
 import pandas as pd
+
 from wmrc import yearly
 
 
@@ -75,6 +76,7 @@ class TestYearlyMetrics:
                 "msw_composted": [0.0, 0.0, 50.0],
                 "msw_digested": [1.0, 0.0, 0.0],
                 "msw_landfilled": [80, 90, 30],
+                "msw_recycling_rate": [2 / 82 * 100, 5 / 95 * 100, 70 / 100 * 100],
             }
         )
 

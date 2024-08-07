@@ -232,5 +232,9 @@ def facility_combined_metrics(year_df: pd.DataFrame) -> pd.DataFrame:
     stats_df["msw_composted"] = msw_modifier * year_df["Total_Materials_sent_to_composting__c"]
     stats_df["msw_digested"] = msw_modifier * year_df["Total_Material_managed_by_ADC__c"]
     stats_df["msw_landfilled"] = year_df["Municipal_Waste_In_State_in_Tons__c"]
-
+    stats_df["msw_recycling_rate"] = (
+        (stats_df["msw_recycled"] + stats_df["msw_composted"] + stats_df["msw_digested"])
+        / (stats_df["msw_recycled"] + stats_df["msw_composted"] + stats_df["msw_digested"] + stats_df["msw_landfilled"])
+        * 100
+    )
     return stats_df

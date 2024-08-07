@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 from wmrc import summarize
 
 
@@ -278,6 +279,7 @@ class TestFacilityMetrics:
                 "msw_composted": [0.0, 50.0, 0.0],
                 "msw_digested": [1.0, 0.0, 0.0],
                 "msw_landfilled": [80, 30, 90],
+                "msw_recycling_rate": [2 / 82 * 100, 70 / 100 * 100, 5 / 95 * 100],
             }
         )
 

@@ -118,6 +118,12 @@ jobs:
             --message-body='{"run": "now"}' \
             --quiet
 
+      - name: 📥 Create Validator PubSub topic
+        run: |
+          if [ ! "$(gcloud pubsub topics list | grep $VALIDATOR_SCHEDULE_NAME-topic)" ]; then
+            gcloud pubsub topics create $VALIDATOR_SCHEDULE_NAME-topic --quiet
+          fi
+
       - name: 🚀 Deploy Validator Cloud Function
         id: deploy-validator
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -137,12 +143,6 @@ jobs:
             /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
           max_instance_count: 1
           event_trigger_retry: false
-
-      - name: 📥 Create Validator PubSub topic
-        run: |
-          if [ ! "$(gcloud pubsub topics list | grep $VALIDATOR_SCHEDULE_NAME-topic)" ]; then
-            gcloud pubsub topics create $VALIDATOR_SCHEDULE_NAME-topic --quiet
-          fi
 
       - name: 🕰️ Create Validator Cloud Scheduler
         run: |

@@ -16,7 +16,7 @@ env:
   SCHEDULE_NAME: saturday-evening
   SCHEDULE_CRON: 0 22 * * 6
   SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot every saturday evening at 10pm
-  VALIDATOR_SCHEDULE_NAME: validator
+  VALIDATOR_SCHEDULE_NAME: wmrc-validator
   VALIDATOR_SCHEDULE_CRON: 0 8 1 4-6 *
   VALIDATOR_SCHEDULE_DESCRIPTION: Trigger the wmrc validation bot every 1st of April, May, and June at 8am
 

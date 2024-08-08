@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import pytest
+
 from wmrc import validate
 
 
@@ -73,7 +74,7 @@ class TestReportValidations:
 
         return expected_output
 
-    def test_facility_year_over_year(self, input_df, expected_output):
+    def test_facility_year_over_year_happy_path(self, input_df, expected_output):
         new_columns = pd.DataFrame(
             {
                 "id": ["SW01", "SW03", "SW01", "SW03"],
@@ -82,7 +83,68 @@ class TestReportValidations:
         )
         input_df = pd.concat([new_columns, input_df], axis=1)
 
-        output = validate.facility_year_over_year(input_df, 2023)
+        all_records_df = pd.DataFrame(
+            {
+                "facility_id": ["SW01", "SW03", "SW01", "SW03"],
+                "Calendar_Year__c": [2022, 2022, 2023, 2023],
+                "Municipal_Solid_Waste__c": [10, 50, 100, 100],
+                "Cache_County__c": [80, 50, 40, 100],
+            }
+        )
+
+        output = validate.facility_year_over_year(input_df, all_records_df, 2023)
+
+        new_output_columns = pd.DataFrame(
+            {
+                "percent_msw_pct_change": [900.0, 100.0],
+                "percent_msw_2023": [100, 100],
+                "percent_msw_2022": [10, 50],
+                "percent_msw_diff": [90, 50],
+                "Cache_County_pct_change": [-50.0, 100.0],
+                "Cache_County_2023": [40, 100],
+                "Cache_County_2022": [80, 50],
+                "Cache_County_diff": [-40, 50],
+            },
+            index=pd.MultiIndex.from_tuples([("SW01", "foo"), ("SW03", "baz")], names=["id", "name"]),
+        )
+        expected_output = pd.concat([expected_output, new_output_columns], axis=1)
+
+        pd.testing.assert_frame_equal(expected_output, output)
+
+    def test_facility_year_over_year_switches_record_year_to_int(self, input_df, expected_output):
+        new_columns = pd.DataFrame(
+            {
+                "id": ["SW01", "SW03", "SW01", "SW03"],
+                "name": ["foo", "baz", "foo", "baz"],
+            }
+        )
+        input_df = pd.concat([new_columns, input_df], axis=1)
+
+        all_records_df = pd.DataFrame(
+            {
+                "facility_id": ["SW01", "SW03", "SW01", "SW03"],
+                "Calendar_Year__c": ["2022", "2022", "2023", "2023"],
+                "Municipal_Solid_Waste__c": [10, 50, 100, 100],
+                "Cache_County__c": [80, 50, 40, 100],
+            }
+        )
+
+        output = validate.facility_year_over_year(input_df, all_records_df, 2023)
+
+        new_output_columns = pd.DataFrame(
+            {
+                "percent_msw_pct_change": [900.0, 100.0],
+                "percent_msw_2023": [100, 100],
+                "percent_msw_2022": [10, 50],
+                "percent_msw_diff": [90, 50],
+                "Cache_County_pct_change": [-50.0, 100.0],
+                "Cache_County_2023": [40, 100],
+                "Cache_County_2022": [80, 50],
+                "Cache_County_diff": [-40, 50],
+            },
+            index=pd.MultiIndex.from_tuples([("SW01", "foo"), ("SW03", "baz")], names=["id", "name"]),
+        )
+        expected_output = pd.concat([expected_output, new_output_columns], axis=1)
 
         pd.testing.assert_frame_equal(expected_output, output)
 

@@ -23,10 +23,11 @@ AGOL_ORG = "https://utahdeq.maps.arcgis.com"
 SENDGRID_SETTINGS = {  #: Settings for SendGridHandler
     "from_address": "noreply@utah.gov",
     "to_addresses": [
-        "jdadams@utah.gov",
-        "stevienorcross@utah.gov",
-        "gerardorodriguez@utah.gov",
-        "rachelboyer@utah.gov",
+        # "jdadams@utah.gov",
+        # "stevienorcross@utah.gov",
+        # "gerardorodriguez@utah.gov",
+        # "rachelboyer@utah.gov",
+        "deq-wmrc-recycling-map@utah.gov",
     ],
     "prefix": f"{SKID_NAME} on {HOST_NAME}: ",
 }

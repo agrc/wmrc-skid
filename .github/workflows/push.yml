@@ -44,6 +44,7 @@ jobs:
 
       - name: Install libkrb5 for Kerberos on Linux
         run: |
+          sudo apt-get update
           sudo apt install -y libkrb5-dev
 
       - name: Install module

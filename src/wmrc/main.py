@@ -3,6 +3,7 @@
 """
 Run the wmrc script as a cloud function.
 """
+import base64
 import json
 import logging
 import sys
@@ -12,9 +13,11 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 
 import arcgis
+import functions_framework
 import google.auth
 import pandas as pd
 from arcgis.features import GeoAccessor, GeoSeriesAccessor  # noqa: F401
+from cloudevents.http import CloudEvent
 from palletjack import extract, load, transform
 from supervisor.message_handlers import SendGridHandler
 from supervisor.models import MessageDetails, Supervisor
@@ -22,11 +25,12 @@ from supervisor.models import MessageDetails, Supervisor
 #: This makes it work when calling with just `python <file>`/installing via pip and in the gcf framework, where
 #: the relative imports fail because of how it's calling the function.
 try:
-    from . import config, helpers, summarize, version, yearly
+    from . import config, helpers, summarize, validate, version, yearly
 except ImportError:
     import config
     import helpers
     import summarize
+    import validate
     import version
     import yearly
 
@@ -302,7 +306,7 @@ class Skid:
                 "latitude",
                 "longitude",
                 "tons_of_material_diverted_from_",
-                "gallons_of_used_oil_collected_for_recycling_last_year",
+                "gallons_of_used_oil_collected_f",
             ],
         )
 
@@ -349,6 +353,7 @@ class Skid:
                     "longitude_": "longitude",
                     "accept_material_dropped_off_by_the_public": "accept_material_dropped_off_by_",
                     "tons_of_material_diverted_from_landfills_last_year": "tons_of_material_diverted_from_",
+                    "gallons_of_used_oil_collected_for_recycling_last_year": "gallons_of_used_oil_collected_f",
                 }
             )
         )
@@ -414,37 +419,96 @@ class Skid:
         return salesforce_records
 
 
-def main(event, context):  # pylint: disable=unused-argument
+def run_validation():
+
+    start = datetime.now()
+
+    wmrc_skid = Skid()
+
+    base_year = date.today().year - 1
+    report_path = wmrc_skid.tempdir_path / f"validation_{date.today()}.csv"
+
+    wmrc_skid.skid_logger.debug("Loading salesforce data...")
+    records = wmrc_skid._load_salesforce_data()
+    _ = records.deduplicate_records_on_facility_id()
+    facility_summary_df = summarize.facility_metrics(records)
+    county_summary_df = summarize.counties(records)
+
+    wmrc_skid.skid_logger.debug("Year-over-year changes...")
+    facility_changes = validate.facility_year_over_year(facility_summary_df, records.df, base_year)
+    county_changes = validate.county_year_over_year(county_summary_df, base_year)
+    state_changes = validate.state_year_over_year(county_summary_df, base_year)
+
+    wmrc_skid.skid_logger.debug("Cleaning and arranging data...")
+    #: Remove county-wide and statewide prefixes so we can concat the different change dfs by row
+    county_changes.rename(
+        columns={col: col.replace("county_wide_", "") for col in county_changes.columns}, inplace=True
+    )
+    state_changes.rename(columns={col: col.replace("statewide_", "") for col in state_changes.columns}, inplace=True)
+
+    all_changes = pd.concat([facility_changes, county_changes, state_changes], axis=0)
+
+    #: Move the msw_recycling_rate columns to the front, write to csv
+    index_a = all_changes.columns.get_loc("msw_recycling_rate_pct_change")
+    slice_b = all_changes.columns.slice_indexer("msw_recycling_rate_pct_change", "msw_recycling_rate_diff")
+    index_c = all_changes.columns.get_loc("msw_recycling_rate_diff") + 1
+    new_index = all_changes.columns[slice_b].append([all_changes.columns[:index_a], all_changes.columns[index_c:]])
+
+    wmrc_skid.skid_logger.debug("Writing report to csv...")
+    all_changes.reindex(columns=new_index).to_csv(report_path)
+
+    end = datetime.now()
+
+    summary_message = MessageDetails()
+    summary_message.subject = "Validation Summary"
+    summary_rows = [
+        f'{config.SKID_NAME} update {start.strftime("%Y-%m-%d")}',
+        "=" * 20,
+        "",
+        f'Start time: {start.strftime("%H:%M:%S")}',
+        f'End time: {end.strftime("%H:%M:%S")}',
+        f"Duration: {str(end-start)}",
+        "",
+        "Validation Schedule:",
+        "April 1 of each year - First check",
+        "May 1 of each year - Check for go-live",
+        "May 20 of each year - Data from previous year live on map.",
+        "June 1 of each year - Final check",
+    ]
+
+    summary_message.message = "\n".join(summary_rows)
+    summary_message.attachments = report_path
+
+    wmrc_skid.supervisor.notify(summary_message)
+
+
+@functions_framework.cloud_event
+def subscribe(cloud_event: CloudEvent) -> None:
     """Entry point for Google Cloud Function triggered by pub/sub event
 
     Args:
-         event (dict):  The dictionary with data specific to this type of
-                        event. The `@type` field maps to
+         cloud_event (CloudEvent):  The CloudEvent object with data specific to this type of
+                        event. The `type` field maps to
                          `type.googleapis.com/google.pubsub.v1.PubsubMessage`.
                         The `data` field maps to the PubsubMessage data
                         in a base64-encoded string. The `attributes` field maps
                         to the PubsubMessage attributes if any is present.
-         context (google.cloud.functions.Context): Metadata of triggering event
-                        including `event_id` which maps to the PubsubMessage
-                        messageId, `timestamp` which maps to the PubsubMessage
-                        publishTime, `event_type` which maps to
-                        `google.pubsub.topic.publish`, and `resource` which is
-                        a dictionary that describes the service API endpoint
-                        pubsub.googleapis.com, the triggering topic's name, and
-                        the triggering event type
-                        `type.googleapis.com/google.pubsub.v1.PubsubMessage`.
     Returns:
         None. The output is written to Cloud Logging.
     """
 
-    #: This function must be called 'main' to act as the Google Cloud Function entry point. It must accept the two
-    #: arguments listed, but doesn't have to do anything with them (I haven't used them in anything yet).
+    #: This function must be called 'subscribe' to act as the Google Cloud Function entry point. It must accept the
+    #: CloudEvent object as the only argument.
 
-    #: Call process() and any other functions you want to be run as part of the skid here.
-    wmrc_skid = Skid()
-    wmrc_skid.process()
+    #: Use the message-body value from the pub/sub event to figure out which process to run.
+    if base64.b64decode(cloud_event.data["message"]["data"]).decode() == "facility updates":
+        wmrc_skid = Skid()
+        wmrc_skid.process()
+    if base64.b64decode(cloud_event.data["message"]["data"]).decode() == "validate":
+        run_validation()
 
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    main(1, 2)  #: Just some junk args to satisfy the signature needed for Cloud Functions
+    wmrc_skid = Skid()
+    wmrc_skid.process()

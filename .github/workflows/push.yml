@@ -16,6 +16,9 @@ env:
   SCHEDULE_NAME: saturday-evening
   SCHEDULE_CRON: 0 22 * * 6
   SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot every saturday evening at 10pm
+  VALIDATOR_SCHEDULE_NAME: wmrc-validator
+  VALIDATOR_SCHEDULE_CRON: 0 8 1 4-6 *
+  VALIDATOR_SCHEDULE_DESCRIPTION: Trigger the wmrc validation bot every 1st of April, May, and June at 8am
 
 concurrency:
   group: "${{ github.head_ref || github.ref }}"
@@ -41,6 +44,7 @@ jobs:
 
       - name: Install libkrb5 for Kerberos on Linux
         run: |
+          sudo apt-get update
           sudo apt install -y libkrb5-dev
 
       - name: Install module
@@ -75,14 +79,14 @@ jobs:
           workload_identity_provider: ${{ secrets.IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
 
-      - name: 🚀 Deploy to Cloud Function
+      - name: 🚀 Deploy Main Cloud Function
         id: deploy
         uses: google-github-actions/deploy-cloud-functions@v3
         timeout-minutes: 15
         with:
           name: wmrc-skid
           runtime: python311
-          entry_point: main
+          entry_point: subscribe
           source_dir: src/wmrc
           service_account: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
           event_trigger_type: google.cloud.pubsub.topic.v1.messagePublished
@@ -95,25 +99,55 @@ jobs:
           max_instance_count: 1
           event_trigger_retry: false
 
-      - name: 📥 Create PubSub topic
+      - name: 📥 Create Main PubSub topic
         run: |
           if [ ! "$(gcloud pubsub topics list | grep $SCHEDULE_NAME-topic)" ]; then
             gcloud pubsub topics create $SCHEDULE_NAME-topic --quiet
           fi
 
-      - name: 🕰️ Create Cloud Scheduler
+      - name: 🕰️ Create Main Cloud Scheduler
         run: |
-          for i in $(gcloud scheduler jobs list --location=us-central1 --uri); do
-            gcloud scheduler jobs delete $i --quiet
-          done
-          gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
-            --description="$SCHEDULE_DESCRIPTION" \
-            --schedule="$SCHEDULE_CRON" \
-            --time-zone=America/Denver \
-            --location=us-central1 \
-            --topic=$SCHEDULE_NAME-topic \
-            --message-body='{"run": "now"}' \
-            --quiet
+          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $SCHEDULE_NAME)" ]; then
+            gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
+              --description="$SCHEDULE_DESCRIPTION" \
+              --schedule="$SCHEDULE_CRON" \
+              --time-zone=America/Denver \
+              --location=us-central1 \
+              --topic=$SCHEDULE_NAME-topic \
+              --message-body='facility updates' \
+              --quiet
+          else
+            gcloud scheduler jobs update pubsub $SCHEDULE_NAME \
+              --description="$SCHEDULE_DESCRIPTION" \
+              --schedule="$SCHEDULE_CRON" \
+              --time-zone=America/Denver \
+              --location=us-central1 \
+              --topic=$SCHEDULE_NAME-topic \
+              --message-body='facility updates' \
+              --quiet
+          fi
+
+      - name: 🕰️ Create Validator Cloud Scheduler
+        run: |
+          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $VALIDATOR_SCHEDULE_NAME)" ]; then
+            gcloud scheduler jobs create pubsub $VALIDATOR_SCHEDULE_NAME \
+              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
+              --schedule="$VALIDATOR_SCHEDULE_CRON" \
+              --time-zone=America/Denver \
+              --location=us-central1 \
+              --topic=$SCHEDULE_NAME-topic \
+              --message-body='validate' \
+              --quiet
+          else
+            gcloud scheduler jobs update pubsub $VALIDATOR_SCHEDULE_NAME \
+              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
+              --schedule="$VALIDATOR_SCHEDULE_CRON" \
+              --time-zone=America/Denver \
+              --location=us-central1 \
+              --topic=$SCHEDULE_NAME-topic \
+              --message-body='validate' \
+              --quiet
+          fi
 
   deploy-prod:
     name: Deploy to GCF - prod

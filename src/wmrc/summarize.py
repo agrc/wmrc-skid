@@ -245,3 +245,27 @@ def recovery_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
     clean_rates.index = clean_rates.index.map(helpers.convert_to_int)
 
     return clean_rates
+
+
+def facility_metrics(records: helpers.SalesForceRecords) -> pd.DataFrame:
+    """Get the recycled, composting, digested, and landfilled (RCDL) numbers for each facility grouped by year.
+
+    Args:
+        records (helpers.SalesForceRecords): Salesforce records loaded into a helper object
+
+    Returns:
+        pd.DataFrame: RCDL metrics for each facility with data_year column as integer
+    """
+
+    facility_metrics = (
+        records.df.groupby("Calendar_Year__c")
+        .apply(
+            yearly.facility_combined_metrics,
+        )
+        .droplevel(1)
+    )
+    facility_metrics.index.name = "data_year"
+    facility_metrics.reset_index(inplace=True)
+    facility_metrics["data_year"] = facility_metrics["data_year"].apply(helpers.convert_to_int)
+
+    return facility_metrics

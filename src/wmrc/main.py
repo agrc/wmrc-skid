@@ -419,44 +419,13 @@ class Skid:
         return salesforce_records
 
 
-# def main(event, context):  # pylint: disable=unused-argument
-#     """Entry point for Google Cloud Function triggered by pub/sub event
-
-#     Args:
-#          event (dict):  The dictionary with data specific to this type of
-#                         event. The `@type` field maps to
-#                          `type.googleapis.com/google.pubsub.v1.PubsubMessage`.
-#                         The `data` field maps to the PubsubMessage data
-#                         in a base64-encoded string. The `attributes` field maps
-#                         to the PubsubMessage attributes if any is present.
-#          context (google.cloud.functions.Context): Metadata of triggering event
-#                         including `event_id` which maps to the PubsubMessage
-#                         messageId, `timestamp` which maps to the PubsubMessage
-#                         publishTime, `event_type` which maps to
-#                         `google.pubsub.topic.publish`, and `resource` which is
-#                         a dictionary that describes the service API endpoint
-#                         pubsub.googleapis.com, the triggering topic's name, and
-#                         the triggering event type
-#                         `type.googleapis.com/google.pubsub.v1.PubsubMessage`.
-#     Returns:
-#         None. The output is written to Cloud Logging.
-#     """
-
-#     #: This function must be called 'main' to act as the Google Cloud Function entry point. It must accept the two
-#     #: arguments listed, but doesn't have to do anything with them (I haven't used them in anything yet).
-
-#     #: Call process() and any other functions you want to be run as part of the skid here.
-#     wmrc_skid = Skid()
-#     wmrc_skid.process()
-
-
 def run_validation():
 
     start = datetime.now()
 
     wmrc_skid = Skid()
 
-    base_year = 2023
+    base_year = date.today().year - 1
     report_path = wmrc_skid.tempdir_path / f"validation_{date.today()}.csv"
 
     wmrc_skid.skid_logger.debug("Loading salesforce data...")
@@ -466,8 +435,6 @@ def run_validation():
     county_summary_df = summarize.counties(records)
 
     wmrc_skid.skid_logger.debug("Year-over-year changes...")
-
-    #: Calc year-over-year changes
     facility_changes = validate.facility_year_over_year(facility_summary_df, records.df, base_year)
     county_changes = validate.county_year_over_year(county_summary_df, base_year)
     state_changes = validate.state_year_over_year(county_summary_df, base_year)
@@ -533,6 +500,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
     #: This function must be called 'subscribe' to act as the Google Cloud Function entry point. It must accept the
     #: CloudEvent object as the only argument.
 
+    #: Use the message-body value from the pub/sub event to figure out which process to run.
     if base64.b64decode(cloud_event.data["message"]["data"]).decode() == "facility updates":
         wmrc_skid = Skid()
         wmrc_skid.process()

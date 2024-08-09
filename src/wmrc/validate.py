@@ -2,12 +2,9 @@ import pandas as pd
 from toolz import interleave
 
 try:
-    from wmrc import summarize, yearly
-    from wmrc.main import Skid
+    from wmrc import yearly
 except ImportError:
-    import summarize
     import yearly
-    from main import Skid
 
 
 def state_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.DataFrame:

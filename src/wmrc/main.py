@@ -451,20 +451,28 @@ class Skid:
 
 
 def run_validation():
-    base_year = 2023
-    report_path = r"c:\gis\projects\wmrc\data\from_sf\validation_2.csv"
+
+    start = datetime.now()
 
     wmrc_skid = Skid()
+
+    base_year = 2023
+    report_path = wmrc_skid.tempdir_path / f"validation_{date.today()}.csv"
+
+    wmrc_skid.skid_logger.debug("Loading salesforce data...")
     records = wmrc_skid._load_salesforce_data()
     _ = records.deduplicate_records_on_facility_id()
     facility_summary_df = summarize.facility_metrics(records)
     county_summary_df = summarize.counties(records)
+
+    wmrc_skid.skid_logger.debug("Year-over-year changes...")
 
     #: Calc year-over-year changes
     facility_changes = validate.facility_year_over_year(facility_summary_df, records.df, base_year)
     county_changes = validate.county_year_over_year(county_summary_df, base_year)
     state_changes = validate.state_year_over_year(county_summary_df, base_year)
 
+    wmrc_skid.skid_logger.debug("Cleaning and arranging data...")
     #: Remove county-wide and statewide prefixes so we can concat the different change dfs by row
     county_changes.rename(
         columns={col: col.replace("county_wide_", "") for col in county_changes.columns}, inplace=True
@@ -479,7 +487,32 @@ def run_validation():
     index_c = all_changes.columns.get_loc("msw_recycling_rate_diff") + 1
     new_index = all_changes.columns[slice_b].append([all_changes.columns[:index_a], all_changes.columns[index_c:]])
 
+    wmrc_skid.skid_logger.debug("Writing report to csv...")
     all_changes.reindex(columns=new_index).to_csv(report_path)
+
+    end = datetime.now()
+
+    summary_message = MessageDetails()
+    summary_message.subject = "Validation Summary"
+    summary_rows = [
+        f'{config.SKID_NAME} update {start.strftime("%Y-%m-%d")}',
+        "=" * 20,
+        "",
+        f'Start time: {start.strftime("%H:%M:%S")}',
+        f'End time: {end.strftime("%H:%M:%S")}',
+        f"Duration: {str(end-start)}",
+        "",
+        "Validation Schedule:",
+        "April 1 of each year - First check",
+        "May 1 of each year - Check for go-live",
+        "May 20 of each year - Data from previous year live on map.",
+        "June 1 of each year - Final check",
+    ]
+
+    summary_message.message = "\n".join(summary_rows)
+    summary_message.attachments = report_path
+
+    wmrc_skid.supervisor.notify(summary_message)
 
 
 @functions_framework.cloud_event

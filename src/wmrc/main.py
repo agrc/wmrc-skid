@@ -450,6 +450,38 @@ class Skid:
 #     wmrc_skid.process()
 
 
+def run_validation():
+    base_year = 2023
+    report_path = r"c:\gis\projects\wmrc\data\from_sf\validation_2.csv"
+
+    wmrc_skid = Skid()
+    records = wmrc_skid._load_salesforce_data()
+    _ = records.deduplicate_records_on_facility_id()
+    facility_summary_df = summarize.facility_metrics(records)
+    county_summary_df = summarize.counties(records)
+
+    #: Calc year-over-year changes
+    facility_changes = validate.facility_year_over_year(facility_summary_df, records.df, base_year)
+    county_changes = validate.county_year_over_year(county_summary_df, base_year)
+    state_changes = validate.state_year_over_year(county_summary_df, base_year)
+
+    #: Remove county-wide and statewide prefixes so we can concat the different change dfs by row
+    county_changes.rename(
+        columns={col: col.replace("county_wide_", "") for col in county_changes.columns}, inplace=True
+    )
+    state_changes.rename(columns={col: col.replace("statewide_", "") for col in state_changes.columns}, inplace=True)
+
+    all_changes = pd.concat([facility_changes, county_changes, state_changes], axis=0)
+
+    #: Move the msw_recycling_rate columns to the front, write to csv
+    index_a = all_changes.columns.get_loc("msw_recycling_rate_pct_change")
+    slice_b = all_changes.columns.slice_indexer("msw_recycling_rate_pct_change", "msw_recycling_rate_diff")
+    index_c = all_changes.columns.get_loc("msw_recycling_rate_diff") + 1
+    new_index = all_changes.columns[slice_b].append([all_changes.columns[:index_a], all_changes.columns[index_c:]])
+
+    all_changes.reindex(columns=new_index).to_csv(report_path)
+
+
 @functions_framework.cloud_event
 def subscribe(cloud_event: CloudEvent) -> None:
     """Entry point for Google Cloud Function triggered by pub/sub event
@@ -472,7 +504,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
         wmrc_skid = Skid()
         wmrc_skid.process()
     if base64.b64decode(cloud_event.data["message"]["data"]).decode() == "validate":
-        validate.run_validations()
+        run_validation()
 
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.

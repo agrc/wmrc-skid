@@ -1,8 +1,13 @@
 import pandas as pd
 from toolz import interleave
 
-from wmrc import summarize, yearly
-from wmrc.main import Skid
+try:
+    from wmrc import summarize, yearly
+    from wmrc.main import Skid
+except ImportError:
+    import summarize
+    import yearly
+    from main import Skid
 
 
 def state_year_over_year(county_df: pd.DataFrame, current_year: int) -> pd.DataFrame:
@@ -134,6 +139,9 @@ def _year_over_year_changes(metrics_df: pd.DataFrame, current_year: int) -> pd.D
 
 def run_validations():
 
+    base_year = 2023
+    report_path = r"c:\gis\projects\wmrc\data\from_sf\validation_2.csv"
+
     #: Get records from salesforce, run summary methods
     wmrc_skid = Skid()
     records = wmrc_skid._load_salesforce_data()
@@ -142,9 +150,9 @@ def run_validations():
     county_summary_df = summarize.counties(records)
 
     #: Calc year-over-year changes
-    facility_changes = facility_year_over_year(facility_summary_df, records.df, 2023)
-    county_changes = county_year_over_year(county_summary_df, 2023)
-    state_changes = state_year_over_year(county_summary_df, 2023)
+    facility_changes = facility_year_over_year(facility_summary_df, records.df, base_year)
+    county_changes = county_year_over_year(county_summary_df, base_year)
+    state_changes = state_year_over_year(county_summary_df, base_year)
 
     #: Remove county-wide and statewide prefixes so we can concat the different change dfs by row
     county_changes.rename(
@@ -160,7 +168,7 @@ def run_validations():
     index_c = all_changes.columns.get_loc("msw_recycling_rate_diff") + 1
     new_index = all_changes.columns[slice_b].append([all_changes.columns[:index_a], all_changes.columns[index_c:]])
 
-    all_changes.reindex(columns=new_index).to_csv(r"c:\gis\projects\wmrc\data\from_sf\validation_2.csv")
+    all_changes.reindex(columns=new_index).to_csv(report_path)
 
 
 if __name__ == "__main__":

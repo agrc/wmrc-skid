@@ -326,7 +326,7 @@ class Skid:
         #: Get individual sheets
         gsheet_extractor = extract.GSheetLoader(self.secrets.SERVICE_ACCOUNT_JSON)
         sw_df = gsheet_extractor.load_specific_worksheet_into_dataframe(
-            self.secrets.SHEET_ID, "SW Facilities", by_title=True
+            self.secrets.SHEET_ID, "Facilities", by_title=True
         )
         uocc_df = gsheet_extractor.load_specific_worksheet_into_dataframe(self.secrets.SHEET_ID, "UOCCs", by_title=True)
 

@@ -1,0 +1,53 @@
+name: Release Events
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy-prod:
+    name: Deploy to GCF - prod
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: ⬇️ Set up code
+        uses: actions/checkout@v4
+        with:
+          show-progress: false
+
+      - name: Deploy
+        uses: ./.github/actions/deploy
+        timeout-minutes: 15
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          identity_provider: ${{ secrets.IDENTITY_PROVIDER }}
+          service_account_email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+          storage_bucket: ${{ secrets.STORAGE_BUCKET }}
+
+      - name: 🔔 Create deployment notification
+        uses: agrc/service-now-worknote-action@v1
+        with:
+          repo-token: ${{ github.token }}
+          username: ${{ secrets.SN_USERNAME }}
+          password: ${{ secrets.SN_PASSWORD }}
+          instance-name: ${{ secrets.SN_INSTANCE }}
+          table-name: ${{ secrets.SN_TABLE }}
+          system-id: ${{ secrets.SN_SYS_ID }}
+
+  notify:
+    name: Notifications
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Release Notifier
+        uses: agrc/release-issue-notifications-action@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

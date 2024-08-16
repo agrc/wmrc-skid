@@ -2,62 +2,38 @@ name: Push Events
 
 on:
   push:
-    branches:
-      - main
-      - dev
-  pull_request:
-    branches:
-      - main
-      - dev
-
-env:
-  CLOUD_FUNCTION_MEMORY: 1024M
-  CLOUD_FUNCTION_RUN_TIMEOUT: 9m
-  SCHEDULE_NAME: saturday-evening
-  SCHEDULE_CRON: 0 22 * * 6
-  SCHEDULE_DESCRIPTION: Trigger the wmrc-skid bot every saturday evening at 10pm
-  VALIDATOR_SCHEDULE_NAME: wmrc-validator
-  VALIDATOR_SCHEDULE_CRON: 0 8 1 4-6 *
-  VALIDATOR_SCHEDULE_DESCRIPTION: Trigger the wmrc validation bot every 1st of April, May, and June at 8am
 
 concurrency:
-  group: "${{ github.head_ref || github.ref }}"
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Setup and Test
+  release-please:
+    name: Create release
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: 🚀 Create Release
+        id: release-please
+        uses: agrc/release-composite-action@v1
         with:
-          show-progress: false
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-          cache: pip
-          cache-dependency-path: setup.py
-
-      - name: Install libkrb5 for Kerberos on Linux
-        run: |
-          sudo apt-get update
-          sudo apt install -y libkrb5-dev
-
-      - name: Install module
-        run: pip install .[tests]
-
-      - name: Test with pytest
-        run: pytest
+          release-type: python
+          prerelease: ${{ github.ref_name == 'dev' }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          github-app-id: ${{ secrets.UGRC_RELEASE_BOT_APP_ID }}
+          github-app-key: ${{ secrets.UGRC_RELEASE_BOT_APP_KEY }}
+          github-app-name: ${{ secrets.UGRC_RELEASE_BOT_NAME }}
+          github-app-email: ${{ secrets.UGRC_RELEASE_BOT_EMAIL }}
+          extra-files: src/wmrc/version.py
 
   deploy-dev:
     name: Deploy to GCF - dev
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref_name == 'dev'
     environment:
       name: dev
     permissions:
@@ -70,187 +46,11 @@ jobs:
         with:
           show-progress: false
 
-      - name: 🗝️ Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          create_credentials_file: true
-          token_format: access_token
-          workload_identity_provider: ${{ secrets.IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-
-      - name: 🚀 Deploy Main Cloud Function
-        id: deploy
-        uses: google-github-actions/deploy-cloud-functions@v3
+      - name: Deploy
+        uses: ./.github/actions/deploy
         timeout-minutes: 15
         with:
-          name: wmrc-skid
-          runtime: python311
-          entry_point: subscribe
-          source_dir: src/wmrc
-          service_account: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
-          event_trigger_type: google.cloud.pubsub.topic.v1.messagePublished
-          event_trigger_pubsub_topic: projects/${{ secrets.PROJECT_ID }}/topics/${{ env.SCHEDULE_NAME }}-topic
-          memory: ${{ env.CLOUD_FUNCTION_MEMORY }}
-          service_timeout: ${{ env.CLOUD_FUNCTION_RUN_TIMEOUT }}
-          environment_variables: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
-          secrets: |
-            /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
-          max_instance_count: 1
-          event_trigger_retry: false
-
-      - name: 📥 Create Main PubSub topic
-        run: |
-          if [ ! "$(gcloud pubsub topics list | grep $SCHEDULE_NAME-topic)" ]; then
-            gcloud pubsub topics create $SCHEDULE_NAME-topic --quiet
-          fi
-
-      - name: 🕰️ Create Main Cloud Scheduler
-        run: |
-          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $SCHEDULE_NAME)" ]; then
-            gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
-              --description="$SCHEDULE_DESCRIPTION" \
-              --schedule="$SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='facility updates' \
-              --quiet
-          else
-            gcloud scheduler jobs update pubsub $SCHEDULE_NAME \
-              --description="$SCHEDULE_DESCRIPTION" \
-              --schedule="$SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='facility updates' \
-              --quiet
-          fi
-
-      - name: 🕰️ Create Validator Cloud Scheduler
-        run: |
-          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $VALIDATOR_SCHEDULE_NAME)" ]; then
-            gcloud scheduler jobs create pubsub $VALIDATOR_SCHEDULE_NAME \
-              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
-              --schedule="$VALIDATOR_SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='validate' \
-              --quiet
-          else
-            gcloud scheduler jobs update pubsub $VALIDATOR_SCHEDULE_NAME \
-              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
-              --schedule="$VALIDATOR_SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='validate' \
-              --quiet
-          fi
-
-  deploy-prod:
-    name: Deploy to GCF - prod
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: prod
-    permissions:
-      id-token: write
-      contents: read
-
-    steps:
-      - name: ⬇️ Set up code
-        uses: actions/checkout@v4
-        with:
-          show-progress: false
-
-      - name: 🗝️ Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          create_credentials_file: true
-          token_format: access_token
-          workload_identity_provider: ${{ secrets.IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-
-      - name: 🚀 Deploy Main Cloud Function
-        id: deploy
-        uses: google-github-actions/deploy-cloud-functions@v3
-        timeout-minutes: 15
-        with:
-          name: wmrc-skid
-          runtime: python311
-          entry_point: subscribe
-          source_dir: src/wmrc
-          service_account: cloud-function-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
-          event_trigger_type: google.cloud.pubsub.topic.v1.messagePublished
-          event_trigger_pubsub_topic: projects/${{ secrets.PROJECT_ID }}/topics/${{ env.SCHEDULE_NAME }}-topic
-          memory: ${{ env.CLOUD_FUNCTION_MEMORY }}
-          service_timeout: ${{ env.CLOUD_FUNCTION_RUN_TIMEOUT }}
-          environment_variables: STORAGE_BUCKET=${{secrets.STORAGE_BUCKET}}
-          secrets: |
-            /secrets/app/secrets.json=${{secrets.PROJECT_ID}}/skid-secrets
-          max_instance_count: 1
-          event_trigger_retry: false
-
-      - name: 📥 Create Main PubSub topic
-        run: |
-          if [ ! "$(gcloud pubsub topics list | grep $SCHEDULE_NAME-topic)" ]; then
-            gcloud pubsub topics create $SCHEDULE_NAME-topic --quiet
-          fi
-
-      - name: 🕰️ Create Main Cloud Scheduler
-        run: |
-          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $SCHEDULE_NAME)" ]; then
-            gcloud scheduler jobs create pubsub $SCHEDULE_NAME \
-              --description="$SCHEDULE_DESCRIPTION" \
-              --schedule="$SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='facility updates' \
-              --quiet
-          else
-            gcloud scheduler jobs update pubsub $SCHEDULE_NAME \
-              --description="$SCHEDULE_DESCRIPTION" \
-              --schedule="$SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='facility updates' \
-              --quiet
-          fi
-
-      - name: 🕰️ Create Validator Cloud Scheduler
-        run: |
-          if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep $VALIDATOR_SCHEDULE_NAME)" ]; then
-            gcloud scheduler jobs create pubsub $VALIDATOR_SCHEDULE_NAME \
-              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
-              --schedule="$VALIDATOR_SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='validate' \
-              --quiet
-          else
-            gcloud scheduler jobs update pubsub $VALIDATOR_SCHEDULE_NAME \
-              --description="$VALIDATOR_SCHEDULE_DESCRIPTION" \
-              --schedule="$VALIDATOR_SCHEDULE_CRON" \
-              --time-zone=America/Denver \
-              --location=us-central1 \
-              --topic=$SCHEDULE_NAME-topic \
-              --message-body='validate' \
-              --quiet
-          fi
-
-      - name: 🔔 Create deployment notification
-        uses: agrc/service-now-worknote-action@v1
-        with:
-          repo-token: ${{ github.token }}
-          username: ${{ secrets.SN_USERNAME }}
-          password: ${{ secrets.SN_PASSWORD }}
-          instance-name: ${{ secrets.SN_INSTANCE }}
-          table-name: ${{ secrets.SN_TABLE }}
-          system-id: ${{ secrets.SN_SYS_ID }}
+          project_id: ${{ secrets.PROJECT_ID }}
+          identity_provider: ${{ secrets.IDENTITY_PROVIDER }}
+          service_account_email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+          storage_bucket: ${{ secrets.STORAGE_BUCKET }}

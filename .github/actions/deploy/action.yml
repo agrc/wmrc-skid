@@ -29,11 +29,6 @@ runs:
         echo "VALIDATOR_SCHEDULE_CRON=0 8 1 4-6 *" >> "${GITHUB_OUTPUT}"
         echo "TOPIC_NAME=wmrc-topic" >> "${GITHUB_OUTPUT}"
 
-    - name: ⬇️ Set up code
-      uses: actions/checkout@v4
-      with:
-        show-progress: false
-
     - name: 🗝️ Authenticate to Google Cloud
       id: auth
       uses: google-github-actions/auth@v2

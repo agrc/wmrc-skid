@@ -43,6 +43,13 @@ runs:
         workload_identity_provider: ${{ inputs.identity_provider }}
         service_account: ${{ inputs.service_account_email }}
 
+    - name: 📥 Create Main PubSub topic
+      shell: bash
+      run: |
+        if [ ! "$(gcloud pubsub topics list | grep ${{ steps.globals.outputs.TOPIC_NAME }})" ]; then
+          gcloud pubsub topics create ${{ steps.globals.outputs.TOPIC_NAME }} --quiet
+        fi
+
     - name: 🚀 Deploy Main Cloud Function
       id: deploy
       uses: google-github-actions/deploy-cloud-functions@v3
@@ -61,13 +68,6 @@ runs:
           /secrets/app/secrets.json=${{ inputs.project_id }}/skid-secrets
         max_instance_count: 1
         event_trigger_retry: false
-
-    - name: 📥 Create Main PubSub topic
-      shell: bash
-      run: |
-        if [ ! "$(gcloud pubsub topics list | grep ${{ steps.globals.outputs.TOPIC_NAME }})" ]; then
-          gcloud pubsub topics create ${{ steps.globals.outputs.TOPIC_NAME }}--quiet
-        fi
 
     - name: 🕰️ Create Main Cloud Scheduler
       shell: bash

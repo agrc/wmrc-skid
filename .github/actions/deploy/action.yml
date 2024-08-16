@@ -22,11 +22,11 @@ runs:
       shell: bash
       run: |
         echo "MAIN_SCHEDULE_NAME=wmrc_main" >> "${GITHUB_OUTPUT}"
-        echo "MAIN_SCHEDULE_CRON=0 22 * * 6 >> "${GITHUB_OUTPUT}"
+        echo "MAIN_SCHEDULE_CRON=0 22 * * 6" >> "${GITHUB_OUTPUT}"
         echo "MAIN_SCHEDULE_DESCRIPTION=Trigger the wmrc-skid bot every saturday evening at 10pm" >> "${GITHUB_OUTPUT}"
         echo "VALIDATOR_SCHEDULE_NAME=validator" >> "${GITHUB_OUTPUT}"
         echo "VALIDATOR_SCHEDULE_DESCRIPTION=Trigger the wmrc validation bot every 1st of April, May, and June at 8am" >> "${GITHUB_OUTPUT}"
-        echo "VALIDATOR_SCHEDULE_CRON=0 8 1 4-6 * >> "${GITHUB_OUTPUT}"
+        echo "VALIDATOR_SCHEDULE_CRON=0 8 1 4-6 *" >> "${GITHUB_OUTPUT}"
         echo "TOPIC_NAME=wmrc-topic" >> "${GITHUB_OUTPUT}"
 
     - name: ⬇️ Set up code

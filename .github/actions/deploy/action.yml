@@ -27,6 +27,7 @@ runs:
         echo "VALIDATOR_SCHEDULE_NAME=validator" >> "${GITHUB_OUTPUT}"
         echo "VALIDATOR_SCHEDULE_DESCRIPTION=Trigger the wmrc validation bot every 1st of April, May, and June at 8am" >> "${GITHUB_OUTPUT}"
         echo "VALIDATOR_SCHEDULE_CRON=0 8 1 4-6 * >> "${GITHUB_OUTPUT}"
+        echo "TOPIC_NAME=wmrc-topic" >> "${GITHUB_OUTPUT}"
 
     - name: ⬇️ Set up code
       uses: actions/checkout@v4
@@ -52,10 +53,10 @@ runs:
         source_dir: src/wmrc
         service_account: cloud-function-sa@${{ inputs.project_id }}.iam.gserviceaccount.com
         event_trigger_type: google.cloud.pubsub.topic.v1.messagePublished
-        event_trigger_pubsub_topic: projects/${{ inputs.project_id }}/topics/${{ env.SCHEDULE_NAME }}-topic
+        event_trigger_pubsub_topic: projects/${{ inputs.project_id }}/topics/${{ steps.globals.outputs.TOPIC_NAME }}-topic
         memory: 1024M
         service_timeout: 9m
-        environment_variables: STORAGE_BUCKET=${{ inputs.storage_bucket}}
+        environment_variables: STORAGE_BUCKET=${{ inputs.storage_bucket }}
         secrets: |
           /secrets/app/secrets.json=${{ inputs.project_id }}/skid-secrets
         max_instance_count: 1
@@ -64,8 +65,8 @@ runs:
     - name: 📥 Create Main PubSub topic
       shell: bash
       run: |
-        if [ ! "$(gcloud pubsub topics list | grep ${{ steps.globals.outputs.SCHEDULE_NAME }}-topic)" ]; then
-          gcloud pubsub topics create ${{ steps.globals.outputs.SCHEDULE_NAME }}-topic --quiet
+        if [ ! "$(gcloud pubsub topics list | grep ${{ steps.globals.outputs.TOPIC_NAME }})" ]; then
+          gcloud pubsub topics create ${{ steps.globals.outputs.TOPIC_NAME }}--quiet
         fi
 
     - name: 🕰️ Create Main Cloud Scheduler
@@ -77,7 +78,7 @@ runs:
             --schedule="${{ steps.globals.outputs.MAIN_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.MAIN_SCHEDULE_NAME }}"-topic \
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
             --message-body='facility updates' \
             --quiet
         else
@@ -86,7 +87,7 @@ runs:
             --schedule="${{ steps.globals.outputs.MAIN_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.MAIN_SCHEDULE_NAME }}"-topic \
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
             --message-body='facility updates' \
             --quiet
         fi
@@ -100,7 +101,7 @@ runs:
             --schedule="${{ steps.globals.outputs.VALIDATOR_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic=${{ steps.globals.outputs.VALIDATOR_SCHEDULE_NAME }}-topic \
+            --topic=${{ steps.globals.outputs.TOPIC_NAME }}\
             --message-body='validate' \
             --quiet
         else
@@ -109,7 +110,7 @@ runs:
             --schedule="${{ steps.globals.outputs.VALIDATOR_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic=${{ steps.globals.outputs.VALIDATOR_SCHEDULE_NAME }}-topic \
+            --topic=${{ steps.globals.outputs.TOPIC_NAME }}\
             --message-body='validate' \
             --quiet
         fi

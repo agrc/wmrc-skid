@@ -74,20 +74,20 @@ runs:
       run: |
         if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep ${{ steps.globals.outputs.MAIN_SCHEDULE_NAME }})" ]; then
           gcloud scheduler jobs create pubsub "${{ steps.globals.outputs.MAIN_SCHEDULE_NAME }}" \
-            --description="${{ steps.globals.outputs.MAIN_SCHEDULE_DESCRIPTION }}"
+            --description="${{ steps.globals.outputs.MAIN_SCHEDULE_DESCRIPTION }}" \
             --schedule="${{ steps.globals.outputs.MAIN_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}" \
             --message-body='facility updates' \
             --quiet
         else
           gcloud scheduler jobs update pubsub "${{ steps.globals.outputs.MAIN_SCHEDULE_NAME }}" \
-            --description="${{ steps.globals.outputs.MAIN_SCHEDULE_DESCRIPTION }}"
+            --description="${{ steps.globals.outputs.MAIN_SCHEDULE_DESCRIPTION }}" \
             --schedule="${{ steps.globals.outputs.MAIN_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}" \
             --message-body='facility updates' \
             --quiet
         fi
@@ -96,12 +96,12 @@ runs:
       shell: bash
       run: |
         if [ ! "$(gcloud scheduler jobs list --location=us-central1 | grep ${{ steps.globals.outputs.VALIDATOR_SCHEDULE_NAME }})" ]; then
-          gcloud scheduler jobs create pubsub "${{ steps.globals.outputs.VALIDATOR_SCHEDULE_NAME }} \
+          gcloud scheduler jobs create pubsub "${{ steps.globals.outputs.VALIDATOR_SCHEDULE_NAME }}" \
             --description="${{ steps.globals.outputs.VALIDATOR_SCHEDULE_DESCRIPTION }}" \
             --schedule="${{ steps.globals.outputs.VALIDATOR_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}" \
             --message-body='validate' \
             --quiet
         else
@@ -110,7 +110,7 @@ runs:
             --schedule="${{ steps.globals.outputs.VALIDATOR_SCHEDULE_CRON }}" \
             --time-zone=America/Denver \
             --location=us-central1 \
-            --topic="${{ steps.globals.outputs.TOPIC_NAME }}"\
+            --topic="${{ steps.globals.outputs.TOPIC_NAME }}" \
             --message-body='validate' \
             --quiet
         fi

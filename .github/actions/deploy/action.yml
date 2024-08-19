@@ -54,7 +54,7 @@ runs:
         entry_point: subscribe
         source_dir: src/wmrc
         service_account: cloud-function-sa@${{ inputs.project_id }}.iam.gserviceaccount.com
-        event_trigger_type: google.pubsub.topic.publish
+        # event_trigger_type: google.pubsub.topic.publish
         event_trigger_pubsub_topic: projects/${{ inputs.project_id }}/topics/${{ steps.globals.outputs.TOPIC_NAME }}
         memory: 1024M
         service_timeout: 9m

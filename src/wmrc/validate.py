@@ -71,6 +71,7 @@ def facility_year_over_year(
         "facility_id": "id",
         "Calendar_Year__c": "data_year",
         "Municipal_Solid_Waste__c": "percent_msw",
+        "Classifications__c": "classification",
     }
     column_renaming.update({col: col.rstrip("__c") for col in all_facility_records.columns if "_County__c" in col})
     all_facility_records_renamed = all_facility_records.rename(columns=column_renaming)
@@ -86,7 +87,7 @@ def facility_year_over_year(
             right_index=True,
         )
         .reset_index()
-        .set_index(["data_year", "id", "name"])
+        .set_index(["data_year", "id", "name", "classification"])
     )
 
     return _year_over_year_changes(facility_summary_by_year, current_year)

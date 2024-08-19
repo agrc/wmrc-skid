@@ -453,9 +453,13 @@ def run_validation():
     slice_b = all_changes.columns.slice_indexer("msw_recycling_rate_pct_change", "msw_recycling_rate_diff")
     index_c = all_changes.columns.get_loc("msw_recycling_rate_diff") + 1
     new_index = all_changes.columns[slice_b].append([all_changes.columns[:index_a], all_changes.columns[index_c:]])
+    reordered = all_changes.reindex(columns=new_index)
+    classifications = [val[-1] if isinstance(val, tuple) else None for val in reordered.index]
+    reordered.insert(0, "classification", classifications)
+    reordered.index = [val[:-1] if isinstance(val, tuple) else val for val in reordered.index]
 
     wmrc_skid.skid_logger.debug("Writing report to csv...")
-    all_changes.reindex(columns=new_index).to_csv(report_path)
+    reordered.to_csv(report_path)
 
     end = datetime.now()
 
@@ -510,5 +514,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    wmrc_skid = Skid()
-    wmrc_skid.process()
+    # wmrc_skid = Skid()
+    # wmrc_skid.process()
+
+    run_validation()

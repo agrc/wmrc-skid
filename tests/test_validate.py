@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 import pandas as pd
 import pytest
-
 from wmrc import validate
 
 
@@ -87,6 +86,7 @@ class TestReportValidations:
             {
                 "facility_id": ["SW01", "SW03", "SW01", "SW03"],
                 "Calendar_Year__c": [2022, 2022, 2023, 2023],
+                "Classifications__c": ["Class 1", "Recycling", "Class 1", "Recycling"],
                 "Municipal_Solid_Waste__c": [10, 50, 100, 100],
                 "Cache_County__c": [80, 50, 40, 100],
             }
@@ -108,6 +108,11 @@ class TestReportValidations:
             index=pd.MultiIndex.from_tuples([("SW01", "foo"), ("SW03", "baz")], names=["id", "name"]),
         )
         expected_output = pd.concat([expected_output, new_output_columns], axis=1)
+
+        #: Add the classification level to the index
+        expected_output.index = pd.MultiIndex.from_tuples(
+            [("SW01", "foo", "Class 1"), ("SW03", "baz", "Recycling")], names=["id", "name", "classification"]
+        )
 
         pd.testing.assert_frame_equal(expected_output, output)
 
@@ -124,6 +129,7 @@ class TestReportValidations:
             {
                 "facility_id": ["SW01", "SW03", "SW01", "SW03"],
                 "Calendar_Year__c": ["2022", "2022", "2023", "2023"],
+                "Classifications__c": ["Class 1", "Recycling", "Class 1", "Recycling"],
                 "Municipal_Solid_Waste__c": [10, 50, 100, 100],
                 "Cache_County__c": [80, 50, 40, 100],
             }
@@ -145,6 +151,10 @@ class TestReportValidations:
             index=pd.MultiIndex.from_tuples([("SW01", "foo"), ("SW03", "baz")], names=["id", "name"]),
         )
         expected_output = pd.concat([expected_output, new_output_columns], axis=1)
+        #: Add the classification level to the index
+        expected_output.index = pd.MultiIndex.from_tuples(
+            [("SW01", "foo", "Class 1"), ("SW03", "baz", "Recycling")], names=["id", "name", "classification"]
+        )
 
         pd.testing.assert_frame_equal(expected_output, output)
 

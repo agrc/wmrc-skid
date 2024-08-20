@@ -57,18 +57,14 @@ def county_summaries(year_df: pd.DataFrame, county_fields: list[str]) -> pd.Data
     counties_df["county_wide_msw_composted"] = composted_df.sum()
     counties_df["county_wide_msw_digested"] = digested_df.sum()
     counties_df["county_wide_msw_landfilled"] = landfilled_df.sum()
+    counties_df["county_wide_msw_diverted_total"] = (
+        counties_df["county_wide_msw_recycled"]
+        + counties_df["county_wide_msw_composted"]
+        + counties_df["county_wide_msw_digested"]
+    )
     counties_df["county_wide_msw_recycling_rate"] = (
-        (
-            counties_df["county_wide_msw_recycled"]
-            + counties_df["county_wide_msw_composted"]
-            + counties_df["county_wide_msw_digested"]
-        )
-        / (
-            counties_df["county_wide_msw_recycled"]
-            + counties_df["county_wide_msw_composted"]
-            + counties_df["county_wide_msw_digested"]
-            + counties_df["county_wide_msw_landfilled"]
-        )
+        counties_df["county_wide_msw_diverted_total"]
+        / (counties_df["county_wide_msw_diverted_total"] + counties_df["county_wide_msw_landfilled"])
         * 100
     )
 
@@ -194,18 +190,14 @@ def statewide_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
     statewide_series["statewide_msw_composted"] = in_state_only["county_wide_msw_composted"].sum()
     statewide_series["statewide_msw_digested"] = in_state_only["county_wide_msw_digested"].sum()
     statewide_series["statewide_msw_landfilled"] = in_state_only["county_wide_msw_landfilled"].sum()
+    statewide_series["statewide_msw_diverted_total"] = (
+        statewide_series["statewide_msw_recycled"]
+        + statewide_series["statewide_msw_composted"]
+        + statewide_series["statewide_msw_digested"]
+    )
     statewide_series["statewide_msw_recycling_rate"] = (
-        (
-            statewide_series["statewide_msw_recycled"]
-            + statewide_series["statewide_msw_composted"]
-            + statewide_series["statewide_msw_digested"]
-        )
-        / (
-            statewide_series["statewide_msw_recycled"]
-            + statewide_series["statewide_msw_composted"]
-            + statewide_series["statewide_msw_digested"]
-            + statewide_series["statewide_msw_landfilled"]
-        )
+        statewide_series["statewide_msw_diverted_total"]
+        / (statewide_series["statewide_msw_diverted_total"] + statewide_series["statewide_msw_landfilled"])
         * 100
     )
 

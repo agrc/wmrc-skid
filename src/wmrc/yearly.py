@@ -118,13 +118,17 @@ def facility_tons_diverted_from_landfills(year_df: pd.DataFrame) -> pd.DataFrame
         + sum_df["Total_WT_for_combustion_in_Tons__c"]
     )
 
+    #: Include recycling facility recycling totals
+    sum_df["tons_recycled_at_recycle_fac"] = sum_df["Combined_Total_of_Material_Recycled__c"]
+
     #: Extract just the number part of the facility id, strip leading zeros
     sum_df["id_"] = sum_df["facility_id"].astype(str).str[3:].str.lstrip("0")
 
     #: Replace 0s with NaN for AGOL/Arcade logic (want to identify missing data as such, not as 0s)
     sum_df["tons_of_material_diverted_from_"] = sum_df["tons_of_material_diverted_from_"].replace(0, np.nan)
+    sum_df["tons_recycled_at_recycle_fac"] = sum_df["tons_recycled_at_recycle_fac"].replace(0, np.nan)
 
-    return sum_df[["Facility_Name__c", "id_", "tons_of_material_diverted_from_"]]
+    return sum_df[["Facility_Name__c", "id_", "tons_of_material_diverted_from_", "tons_recycled_at_recycle_fac"]]
 
 
 def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[str], total_field: str) -> pd.DataFrame:

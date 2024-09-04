@@ -265,7 +265,7 @@ class Skid:
 
         #:  Merge facility summaries and google sheet on id_
         google_and_sf_data = with_counties_df.merge(
-            facility_summary_df[["id_", "tons_of_material_diverted_from_"]],
+            facility_summary_df[["id_", "tons_of_material_diverted_from_", "tons_recycled_at_recycle_fac"]],
             on="id_",
             how="left",
         )
@@ -307,6 +307,7 @@ class Skid:
                 "longitude",
                 "tons_of_material_diverted_from_",
                 "gallons_of_used_oil_collected_f",
+                "tons_recycled_at_recycle_fac",
             ],
         )
 

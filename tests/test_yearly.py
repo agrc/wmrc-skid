@@ -1,4 +1,5 @@
 import pandas as pd
+
 from wmrc import yearly
 
 
@@ -77,6 +78,7 @@ class TestYearlyMetrics:
                 "statewide_msw_composted": 50,
                 "statewide_msw_digested": 10,
                 "statewide_msw_landfilled": 200,
+                "statewide_msw_diverted_total": 100,
                 "statewide_msw_recycling_rate": 100 / 300 * 100,
             }
         )

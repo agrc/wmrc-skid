@@ -194,6 +194,9 @@ def materials_composted(records: helpers.SalesForceRecords) -> pd.DataFrame:
         .rename(columns={"Calendar_Year__c": "year_"})
     )
     materials_composted["year_"] = materials_composted["year_"].apply(helpers.convert_to_int)
+    materials_composted["material"] = materials_composted["material"].replace(
+        {"BFS": "Biosolids, Food Processing Residuals, and Sewage Sludge"}
+    )
 
     return materials_composted
 

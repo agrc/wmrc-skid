@@ -38,21 +38,21 @@ setup(
     },
     keywords=["gis"],
     install_requires=[
-        "ugrc-palletjack>=4.1,<4.5",
+        "ugrc-palletjack>=4.1,<5.1",
         "agrc-supervisor==3.0.3",
-        "google-cloud-storage==2.16.*",
+        "google-cloud-storage>=2.16,<2.19",
     ],
     extras_require={
         "tests": [
-            "pytest-cov>=3,<5",
+            "pytest-cov>=3,<6",
             "pytest-instafail==0.5.*",
             "pytest-mock==3.*",
             "pytest-ruff==0.*",
             "pytest-watch==4.*",
-            "pytest>=6,<8",
-            "black>=23.3,<23.12",
+            "pytest>=6,<9",
+            "black>=23.3,<24.9",
             "ruff==0.*",
-            "functions-framework==3.4.*",
+            "functions-framework>=3.4,<3.9",
         ]
     },
     setup_requires=[

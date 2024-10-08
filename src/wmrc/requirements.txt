@@ -1,4 +1,4 @@
 agrc-supervisor==3.0.3
-ugrc-palletjack==4.4.*
-google-cloud-storage==2.16.*
+ugrc-palletjack==5.1.*
+google-cloud-storage==2.18.*
 requests<2.32

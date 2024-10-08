@@ -1,4 +1,5 @@
 import pandas as pd
+
 from wmrc import main
 
 
@@ -35,7 +36,7 @@ class TestUpdateMethods:
             }
         )
         mocker.patch("wmrc.main.transform.FeatureServiceMerging.get_live_dataframe", return_value=existing_data)
-        updater_mock = mocker.patch("wmrc.main.load.FeatureServiceUpdater").return_value
+        updater_mock = mocker.patch("wmrc.main.load.ServiceUpdater", autospec=True).return_value
 
         county_summaries = pd.DataFrame(
             {
@@ -62,7 +63,7 @@ class TestUpdateMethods:
             }
         )
 
-        pd.testing.assert_frame_equal(updater_mock.truncate_and_load_features.call_args[0][0], test_df)
+        pd.testing.assert_frame_equal(updater_mock.truncate_and_load.call_args[0][0], test_df)
 
 
 class TestCountyNamesMethod:
@@ -94,4 +95,5 @@ class TestCountyNamesMethod:
 
         # spatial_mock.from_xy.assert_called_once_with(df_without_empty, "longitude", "latitude")
         assert spatial_mock.from_xy.call_count == 1
+        pd.testing.assert_frame_equal(spatial_mock.from_xy.call_args[0][0], df_without_empty)
         pd.testing.assert_frame_equal(spatial_mock.from_xy.call_args[0][0], df_without_empty)

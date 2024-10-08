@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/agrc/wmrc-skid/compare/v1.2.1...v1.2.2) (2024-10-08)
+
+
+### Dependencies
+
+* bump the major-dependencies group with 6 updates ([cef3927](https://github.com/agrc/wmrc-skid/commit/cef3927efa9fa905b4510becdeadb73398c07ffd))
+* update palletjack to 5.x ([9b66005](https://github.com/agrc/wmrc-skid/commit/9b660050c866fa0192167e8dbb8893ede8c65329))
+
 ## [1.2.1](https://github.com/agrc/wmrc-skid/compare/1.2.0...v1.2.1) (2024-09-25)
 
 

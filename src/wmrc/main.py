@@ -164,15 +164,15 @@ class Skid:
         self.skid_logger.info("Updating materials recycled...")
         materials_spatial = helpers.add_bogus_geometries(materials_recycled_df)
         materials_spatial.rename(columns={"percent": "percent_"}, inplace=True)
-        materials_loader = load.FeatureServiceUpdater(gis, config.MATERIALS_LAYER_ITEMID, self.tempdir_path)
-        materials_count = materials_loader.truncate_and_load_features(materials_spatial)
+        materials_loader = load.ServiceUpdater(gis, config.MATERIALS_LAYER_ITEMID, working_dir=self.tempdir_path)
+        materials_count = materials_loader.truncate_and_load(materials_spatial)
 
         #:  Materials composted on dashboard:
         self.skid_logger.info("Updating materials composted...")
         composting_spatial = helpers.add_bogus_geometries(materials_composted_df)
         composting_spatial.rename(columns={"percent": "percent_"}, inplace=True)
-        composting_loader = load.FeatureServiceUpdater(gis, config.COMPOSTING_LAYER_ITEMID, self.tempdir_path)
-        composting_count = composting_loader.truncate_and_load_features(composting_spatial)
+        composting_loader = load.ServiceUpdater(gis, config.COMPOSTING_LAYER_ITEMID, working_dir=self.tempdir_path)
+        composting_count = composting_loader.truncate_and_load(composting_spatial)
 
         #: Statewide metrics
         self.skid_logger.info("Updating statewide metrics...")
@@ -180,8 +180,8 @@ class Skid:
         contamination_rates_df = summarize.recovery_rates_by_tonnage(records)
         statewide_metrics = pd.concat([statewide_totals_df, contamination_rates_df], axis=1)
         statewide_spatial = helpers.add_bogus_geometries(statewide_metrics)
-        statewide_loader = load.FeatureServiceUpdater(gis, config.STATEWIDE_LAYER_ITEMID, self.tempdir_path)
-        statewide_count = statewide_loader.truncate_and_load_features(statewide_spatial)
+        statewide_loader = load.ServiceUpdater(gis, config.STATEWIDE_LAYER_ITEMID, working_dir=self.tempdir_path)
+        statewide_count = statewide_loader.truncate_and_load(statewide_spatial)
 
         end = datetime.now()
 
@@ -240,8 +240,8 @@ class Skid:
         new_data.spatial.project(4326)
         new_data.spatial.sr = {"wkid": 4326}
 
-        updater = load.FeatureServiceUpdater(gis, config.COUNTY_LAYER_ITEMID, self.tempdir_path)
-        update_count = updater.truncate_and_load_features(new_data)
+        updater = load.ServiceUpdater(gis, config.COUNTY_LAYER_ITEMID, working_dir=self.tempdir_path)
+        update_count = updater.truncate_and_load(new_data)
         return update_count
 
     def _update_facilities(self, gis: arcgis.gis.GIS, facility_summary_df: pd.DataFrame) -> int:
@@ -312,8 +312,8 @@ class Skid:
         )
 
         self.skid_logger.info("Truncating and loading...")
-        updater = load.FeatureServiceUpdater(gis, config.FACILITIES_LAYER_ITEMID, self.tempdir_path)
-        load_count = updater.truncate_and_load_features(google_and_sf_data)
+        updater = load.ServiceUpdater(gis, config.FACILITIES_LAYER_ITEMID, working_dir=self.tempdir_path)
+        load_count = updater.truncate_and_load(google_and_sf_data)
         return load_count
 
     def _parse_from_google_sheets(self) -> pd.DataFrame:

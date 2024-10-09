@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/agrc/wmrc-skid/compare/v1.2.2...v1.2.3) (2024-10-09)
+
+
+### Dependencies
+
+* bump in requirements.txt too ([b42057d](https://github.com/agrc/wmrc-skid/commit/b42057db988f8410cbde7e1ddecd09004791117b))
+
 ## [1.2.2](https://github.com/agrc/wmrc-skid/compare/v1.2.1...v1.2.2) (2024-10-08)
 
 

@@ -145,25 +145,20 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
         pd.DataFrame: Renamed material types, total tonnage processed, and percent processed
     """
 
-    #: Make sure the MSW percentage field is last
-    try:
-        fields.remove("Municipal_Solid_Waste__c")
-    except ValueError:
-        pass
-    fields.append("Municipal_Solid_Waste__c")
+    #: Make sure the out-of-state and MSW modifier fields are the last two fields
+    needed_fields = _update_fields(fields)
 
     #: Update: Recycling should also include "Recycling Facility Non-Permitted"
-    if classification == "Recycling":
-        classification = ["Recycling", "Recycling Facility Non-Permitted"]
-    if classification == "Composts":
-        classification = ["Composts"]
+    classification = _update_classification(classification)
 
-    subset_df = year_df[year_df["Classifications__c"].isin(classification)][fields]
+    subset_df = year_df[year_df["Classifications__c"].isin(classification)][needed_fields]
 
-    #: Sum totals across all records taking into account MSW modifier, calculate total percentage
+    #: Sum totals across all records taking into account MSW and out-of-state modifiers, calculate total percentage
     sum_series = pd.Series()
-    for col in fields[:-1]:  #: We don't want to total Municipal Solid Waste, we just need for the computation
-        sum_series[col] = (subset_df["Municipal_Solid_Waste__c"] / 100 * subset_df[col]).sum()
+    for col in needed_fields[:-2]:  #: We don't want sum to include raw MSW or out-of-state modifier values
+        sum_series[col] = (
+            (100 - subset_df["Out_of_State__c"]) / 100 * subset_df["Municipal_Solid_Waste__c"] / 100 * subset_df[col]
+        ).sum()
     sum_df = pd.DataFrame(sum_series, columns=["amount"])
     sum_df["percent"] = sum_df["amount"] / sum_df.loc[total_field, "amount"]
 
@@ -179,6 +174,32 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
     )
 
     return sum_df
+
+
+def _update_fields(fields: list[str]) -> list[str]:
+    """Ensures that the Out of state percentage and Municipal Solid Waste fields are the last two fields in the list."""
+    try:
+        fields.remove("Out_of_State__c")
+    except ValueError:
+        pass
+    fields.append("Out_of_State__c")
+
+    try:
+        fields.remove("Municipal_Solid_Waste__c")
+    except ValueError:
+        pass
+    fields.append("Municipal_Solid_Waste__c")
+
+    return fields
+
+
+def _update_classification(classification: str) -> list[str]:
+    """Make classification a list, ensure recycling includes non-permitted facilities."""
+    if classification == "Recycling":
+        classification = ["Recycling", "Recycling Facility Non-Permitted"]
+    if classification == "Composts":
+        classification = ["Composts"]
+    return classification
 
 
 def statewide_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:

@@ -115,3 +115,181 @@ class TestYearlyMetrics:
         output = yearly.facility_combined_metrics(input_df)
 
         pd.testing.assert_frame_equal(output, expected_output)
+
+
+class TestRatesPerMaterial:
+
+    def test_update_classification_sets_recycling_classifications(self):
+        output = yearly._update_classification("Recycling")
+
+        assert output == ["Recycling", "Recycling Facility Non-Permitted"]
+
+    def test_update_classification_sets_composting_classifications(self):
+        output = yearly._update_classification("Composts")
+
+        assert output == ["Composts"]
+
+    def test_update_fields_moves_msw_to_end(self):
+        output = yearly._update_fields(["foo", "Municipal_Solid_Waste__c", "bar", "Out_of_State__c"])
+
+        assert output == ["foo", "bar", "Out_of_State__c", "Municipal_Solid_Waste__c"]
+
+    def test_update_fields_adds_msw(self):
+        output = yearly._update_fields(["foo", "bar", "Out_of_State__c"])
+
+        assert output == ["foo", "bar", "Out_of_State__c", "Municipal_Solid_Waste__c"]
+
+    def test_update_fields_adds_out_of_state(self):
+        output = yearly._update_fields(["foo", "bar", "Municipal_Solid_Waste__c"])
+
+        assert output == ["foo", "bar", "Out_of_State__c", "Municipal_Solid_Waste__c"]
+
+    def test_update_fields_adds_both(self):
+        output = yearly._update_fields(["foo", "bar"])
+
+        assert output == ["foo", "bar", "Out_of_State__c", "Municipal_Solid_Waste__c"]
+
+    def test_update_fields_reorders_both(self):
+        output = yearly._update_fields(["foo", "Municipal_Solid_Waste__c", "Out_of_State__c", "bar"])
+
+        assert output == ["foo", "bar", "Out_of_State__c", "Municipal_Solid_Waste__c"]
+
+    def test_rates_per_material_sums_properly_no_modifiers(self):
+        year_df = pd.DataFrame(
+            {
+                "Classifications__c": ["Recycling", "Recycling"],
+                "Total_Corrugated_Boxes_received__c": [10, 10],
+                "Municipal_Solid_Waste__c": [100, 100],
+                "Out_of_State__c": [0, 0],
+                "Combined_Total_of_Material_Received__c": [10, 10],
+            }
+        )
+
+        expected_output = pd.DataFrame(
+            {
+                "material": ["Combined Total of Material Received", "Corrugated Boxes"],
+                "amount": [20.0, 20.0],
+                "percent": [1.0, 1.0],
+            },
+        )
+
+        output = yearly.rates_per_material(
+            year_df,
+            classification="Recycling",
+            fields=["Combined_Total_of_Material_Received__c", "Total_Corrugated_Boxes_received__c"],
+            total_field="Combined_Total_of_Material_Received__c",
+        )
+
+        pd.testing.assert_frame_equal(output, expected_output)
+
+    def test_rates_per_material_sums_properly_with_msw_modifier(self):
+        year_df = pd.DataFrame(
+            {
+                "Classifications__c": ["Recycling", "Recycling"],
+                "Total_Corrugated_Boxes_received__c": [10, 10],
+                "Municipal_Solid_Waste__c": [50, 50],
+                "Out_of_State__c": [0, 0],
+                "Combined_Total_of_Material_Received__c": [10, 10],
+            }
+        )
+
+        expected_output = pd.DataFrame(
+            {
+                "material": ["Combined Total of Material Received", "Corrugated Boxes"],
+                "amount": [10.0, 10.0],
+                "percent": [1.0, 1.0],
+            },
+        )
+
+        output = yearly.rates_per_material(
+            year_df,
+            classification="Recycling",
+            fields=["Combined_Total_of_Material_Received__c", "Total_Corrugated_Boxes_received__c"],
+            total_field="Combined_Total_of_Material_Received__c",
+        )
+
+        pd.testing.assert_frame_equal(output, expected_output)
+
+    def test_rates_per_material_sums_properly_with_out_of_state_modifier(self):
+        year_df = pd.DataFrame(
+            {
+                "Classifications__c": ["Recycling", "Recycling"],
+                "Total_Corrugated_Boxes_received__c": [10, 10],
+                "Municipal_Solid_Waste__c": [100, 100],
+                "Out_of_State__c": [50, 50],
+                "Combined_Total_of_Material_Received__c": [10, 10],
+            }
+        )
+
+        expected_output = pd.DataFrame(
+            {
+                "material": ["Combined Total of Material Received", "Corrugated Boxes"],
+                "amount": [10.0, 10.0],
+                "percent": [1.0, 1.0],
+            },
+        )
+
+        output = yearly.rates_per_material(
+            year_df,
+            classification="Recycling",
+            fields=["Combined_Total_of_Material_Received__c", "Total_Corrugated_Boxes_received__c"],
+            total_field="Combined_Total_of_Material_Received__c",
+        )
+
+        pd.testing.assert_frame_equal(output, expected_output)
+
+    def test_rates_per_material_sums_properly_with_both_modifiers(self):
+        year_df = pd.DataFrame(
+            {
+                "Classifications__c": ["Recycling", "Recycling"],
+                "Total_Corrugated_Boxes_received__c": [10, 10],
+                "Municipal_Solid_Waste__c": [50, 50],
+                "Out_of_State__c": [50, 50],
+                "Combined_Total_of_Material_Received__c": [10, 10],
+            }
+        )
+
+        expected_output = pd.DataFrame(
+            {
+                "material": ["Combined Total of Material Received", "Corrugated Boxes"],
+                "amount": [5.0, 5.0],
+                "percent": [1.0, 1.0],
+            },
+        )
+
+        output = yearly.rates_per_material(
+            year_df,
+            classification="Recycling",
+            fields=["Combined_Total_of_Material_Received__c", "Total_Corrugated_Boxes_received__c"],
+            total_field="Combined_Total_of_Material_Received__c",
+        )
+
+        pd.testing.assert_frame_equal(output, expected_output)
+
+    def test_rates_per_material_sums_properly_with_both_modifiers_composting(self):
+        year_df = pd.DataFrame(
+            {
+                "Classifications__c": ["Composts", "Composts"],
+                "Total_Agricultural_Organics_received__c": [10, 10],
+                "Municipal_Solid_Waste__c": [50, 50],
+                "Out_of_State__c": [50, 50],
+                "Total_Material_Received_Compost__c": [10, 10],
+            }
+        )
+
+        expected_output = pd.DataFrame(
+            {
+                "material": ["Total Material Received Compost", "Agricultural Organics"],
+                "amount": [5.0, 5.0],
+                "percent": [1.0, 1.0],
+            },
+        )
+
+        output = yearly.rates_per_material(
+            year_df,
+            classification="Composts",
+            fields=["Total_Material_Received_Compost__c", "Total_Agricultural_Organics_received__c"],
+            total_field="Total_Material_Received_Compost__c",
+        )
+
+        pd.testing.assert_frame_equal(output, expected_output)

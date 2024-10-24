@@ -152,7 +152,13 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
         pass
     fields.append("Municipal_Solid_Waste__c")
 
-    subset_df = year_df[year_df["Classifications__c"] == classification][fields]
+    #: Update: Recycling should also include "Recycling Facility Non-Permitted"
+    if classification == "Recycling":
+        classification = ["Recycling", "Recycling Facility Non-Permitted"]
+    if classification == "Composts":
+        classification = ["Composts"]
+
+    subset_df = year_df[year_df["Classifications__c"].isin(classification)][fields]
 
     #: Sum totals across all records taking into account MSW modifier, calculate total percentage
     sum_series = pd.Series()

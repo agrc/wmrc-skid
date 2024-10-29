@@ -163,11 +163,12 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
     sum_df["percent"] = sum_df["amount"] / sum_df.loc[total_field, "amount"]
 
     #: Rename columns for existing AGOL layer
-    regex = re.compile(r"(?<=Total_)(.+)(?=_Materials_recei)|(?<=Total_)(.+)(?=_recei)")
+    regex = re.compile(r"(?<=Total_)(.+)((?=_recei)|((?=_recycled)|(?=Materials_recycled)))")
     sum_df.reset_index(names="material", inplace=True)
     sum_df["material"] = (
         sum_df["material"]
         .apply(lambda x: re.search(regex, x)[0] if re.search(regex, x) else x)
+        .str.removesuffix("_Materials")
         .str.replace("__c", "")
         .str.replace("_", " ")
         .str.replace(" CM", " Compostable Material")

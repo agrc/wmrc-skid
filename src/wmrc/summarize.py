@@ -114,26 +114,19 @@ def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
     """
 
     recycling_fields = [
-        "Combined Total of Material Received",
-        "Total Corrugated Boxes received",
-        "Total Paper and Paperboard received",
-        "Total Plastic Materials received",
-        "Total Glass Materials received",
-        "Total Ferrous Metal Materials received",
-        "Total Aluminum Metal Materials received",
-        "Total Nonferrous Metal received",
-        "Total Rubber Materials received",
-        "Total Leather Materials received",
-        "Total Textile Materials received",
-        "Total Wood Materials received",
-        "Total Yard Trimmings received",
-        "Total Food received",
-        "Total Tires received",
-        "Total Lead-Acid Batteries received",
-        "Total Lithium-Ion Batteries received",
-        "Total Other Electronics received",
-        "Total ICD received",
-        "Total SW Stream Materials received",
+        "Combined Total of Material Recycled",
+        "Total Paper Materials recycled",
+        "Total Plastic Materials recycled",
+        "Total Glass Materials recycled",
+        "Total Metal Materials recycled",
+        "Total Rubber Materials recycled",
+        "Total Leather Materials recycled",
+        "Total Textile Materials recycled",
+        "Total Wood Materials recycled",
+        "Total Tires recycled",
+        "Total Electronics recycled",
+        "Total ICD recycled",
+        "Total SW Stream Materials recycled",
     ]
     renamed_fields = [records.field_mapping[field] for field in recycling_fields if field in records.field_mapping]
     materials_recycled = (
@@ -142,7 +135,7 @@ def materials_recycled(records: helpers.SalesForceRecords) -> pd.DataFrame:
             yearly.rates_per_material,
             classification="Recycling",
             fields=renamed_fields,
-            total_field="Combined_Total_of_Material_Received__c",
+            total_field="Combined_Total_of_Material_Recycled__c",
         )
         .droplevel(1)
         .reset_index()

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.4](https://github.com/agrc/wmrc-skid/compare/v1.2.3...v1.2.4) (2024-10-30)
+
+
+### Bug Fixes
+
+* modify materials with out-of-state value ([2417f2d](https://github.com/agrc/wmrc-skid/commit/2417f2d4fdce66b78f7b7f3b950386a750e7c3da))
+* Recycling includes more classifications ([4e5cc1d](https://github.com/agrc/wmrc-skid/commit/4e5cc1deb63947aefb5f0a8af53723255aefd580))
+* update recycling materials fields ([53e90f6](https://github.com/agrc/wmrc-skid/commit/53e90f6cbe97644ccc263d67028caaeb5f17861d))
+
 ## [1.2.3](https://github.com/agrc/wmrc-skid/compare/v1.2.2...v1.2.3) (2024-10-09)
 
 

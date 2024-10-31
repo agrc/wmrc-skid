@@ -20,14 +20,18 @@ class TestYearlyMetrics:
 
         expected_output = pd.DataFrame(
             {
-                "county_wide_msw_recycled": [7.5, 7.5],
-                "county_wide_msw_composted": [12.5, 12.5],
-                "county_wide_msw_digested": [2.5, 2.5],
-                "county_wide_msw_landfilled": [55.0, 55.0],
-                "county_wide_msw_diverted_total": [22.5, 22.5],
-                "county_wide_msw_recycling_rate": [22.5 / (22.5 + 55.0) * 100, 22.5 / (22.5 + 55.0) * 100],
+                "county_wide_msw_recycled": [7.5, 7.5, 15.0],
+                "county_wide_msw_composted": [12.5, 12.5, 25.0],
+                "county_wide_msw_digested": [2.5, 2.5, 5.0],
+                "county_wide_msw_landfilled": [55.0, 55.0, 110.0],
+                "county_wide_msw_diverted_total": [22.5, 22.5, 45.0],
+                "county_wide_msw_recycling_rate": [
+                    22.5 / (22.5 + 55.0) * 100,
+                    22.5 / (22.5 + 55.0) * 100,
+                    45.0 / (45.0 + 110.0) * 100,
+                ],
             },
-            index=["Cache_County__c", "Utah_County__c"],
+            index=["Cache_County__c", "Utah_County__c", "Statewide"],
         )
 
         output = yearly.county_summaries(facility_year_df, ["Cache_County__c", "Utah_County__c"])

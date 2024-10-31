@@ -220,7 +220,7 @@ def statewide_metrics(county_year_df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Statewide yearly metrics.
     """
 
-    in_state_only = county_year_df.drop(index="Out of State", errors="ignore")
+    in_state_only = county_year_df.drop(index=["Out of State", "Statewide"], errors="ignore")
 
     statewide_series = pd.Series()
     statewide_series["statewide_msw_recycled"] = in_state_only["county_wide_msw_recycled"].sum()

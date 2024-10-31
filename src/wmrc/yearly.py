@@ -57,6 +57,10 @@ def county_summaries(year_df: pd.DataFrame, county_fields: list[str]) -> pd.Data
     counties_df["county_wide_msw_composted"] = composted_df.sum()
     counties_df["county_wide_msw_digested"] = digested_df.sum()
     counties_df["county_wide_msw_landfilled"] = landfilled_df.sum()
+    statewide = counties_df.sum()
+    statewide.name = "Statewide"
+    counties_df = pd.concat([counties_df, pd.DataFrame(statewide).T], axis=0)
+
     counties_df["county_wide_msw_diverted_total"] = (
         counties_df["county_wide_msw_recycled"]
         + counties_df["county_wide_msw_composted"]

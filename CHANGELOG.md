@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/agrc/wmrc-skid/compare/v1.2.4...v1.2.5) (2024-10-31)
+
+
+### Bug Fixes
+
+* add statewide total to county metrics ([8cc13ea](https://github.com/agrc/wmrc-skid/commit/8cc13ea801cfe7d34edceb8a2a5f4d767f6a3f81))
+
 ## [1.2.4](https://github.com/agrc/wmrc-skid/compare/v1.2.3...v1.2.4) (2024-10-30)
 
 

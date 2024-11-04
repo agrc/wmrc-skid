@@ -82,8 +82,9 @@ class TestSummaryMethods:
             {
                 "Calendar_Year__c": [2022, 2022, 2023, 2023],
                 "Out_of_State__c": [0, 0, 0, 0],
-                "Annual_Recycling_Contamination_Rate__c": [10, 0, 10, 20],
-                "Combined_Total_of_Material_Recycled__c": [100, 100, 100, 100],
+                "Municipal_Solid_Waste__c": [100, 100, 100, 100],
+                "Annual_Recycling_Contamination_Rate__c": [50, 0, 50, 50],
+                "Combined_Total_of_Material_Recycled__c": [50, 100, 50, 40],
             }
         )
 
@@ -91,8 +92,8 @@ class TestSummaryMethods:
 
         test_df = pd.Series(
             {
-                2022: 95.0,
-                2023: 85.0,
+                2022: 75.0,
+                2023: 50.0,
             },
             name="annual_recycling_uncontaminated_rate",
         )
@@ -104,11 +105,12 @@ class TestSummaryMethods:
         records = mocker.Mock()
         records.df = pd.DataFrame(
             {
-                "facility_name": ["foo", "bar", "foo", "bar"],
+                # "facility_name": ["foo", "bar", "foo", "bar"],
                 "Calendar_Year__c": [2022, 2022, 2023, 2023],
                 "Out_of_State__c": [0, 100, 0, 100],
-                "Annual_Recycling_Contamination_Rate__c": [10, 0, 10, 20],
-                "Combined_Total_of_Material_Recycled__c": [100, 100, 100, 100],
+                "Municipal_Solid_Waste__c": [100, 100, 100, 100],
+                "Annual_Recycling_Contamination_Rate__c": [50, 0, 50, 50],
+                "Combined_Total_of_Material_Recycled__c": [50, 100, 50, 40],
             }
         )
 
@@ -116,8 +118,8 @@ class TestSummaryMethods:
 
         test_df = pd.Series(
             {
-                2022: 90.0,
-                2023: 90.0,
+                2022: 50.0,
+                2023: 50.0,
             },
             name="annual_recycling_uncontaminated_rate",
         )

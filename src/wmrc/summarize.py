@@ -198,8 +198,9 @@ def recovery_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
     """Calculates a yearly recovery rate based on the Salesforce records.
 
     Recovery rate is opposite of contaminated rate (5% contamination = 95% uncontaminated). Rate is
-    calculated by using the contamination rate to determine contaminated tonnage and comparing that to the total
-    tonnage handled by facilities reporting a contamination rate.
+    calculated by calculating the total in-state MSW recycled per facility and the total received, which comes from
+    dividing that amount by the recovery rate per facility, and then dividing the sums of those two values across all
+    facilities.
 
     Args:
         records (helpers.SalesForceRecords): Helper object containing the Salesforce records
@@ -208,34 +209,30 @@ def recovery_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
         pd.Series: recovery rates per year with index name data_year and series name
             "annual_recycling_uncontaminated_rate"
     """
-    #: First, create a modifier to account for material from out-of-state
+    #: Create our various modifiers
     records.df["in_state_modifier"] = (100 - records.df["Out_of_State__c"]) / 100
+    records.df["msw_modifier"] = records.df["Municipal_Solid_Waste__c"] / 100
+    records.df["recovery_rate"] = (100 - records.df["Annual_Recycling_Contamination_Rate__c"]) / 100
 
-    #: Calculate contaminated tonnage
-    records.df["recycling_tons_contaminated"] = (
-        records.df["Annual_Recycling_Contamination_Rate__c"]
-        / 100
-        * records.df["Combined_Total_of_Material_Recycled__c"]
+    #: Amount of material recycled
+    records.df["in_state_msw_recycled"] = (
+        records.df["Combined_Total_of_Material_Recycled__c"]
         * records.df["in_state_modifier"]
+        * records.df["msw_modifier"]
     )
 
-    #: Calculate total tonnage from facilities reporting a contamination rate
-    records.df["recycling_tons_report_contamination_total"] = pd.NA
-    records.df.loc[~records.df["recycling_tons_contaminated"].isnull(), "recycling_tons_report_contamination_total"] = (
-        records.df["Combined_Total_of_Material_Recycled__c"] * records.df["in_state_modifier"]
+    #: Amount of material received derived from recovery rate
+    records.df["in_state_msw_received_for_recycling"] = (
+        records.df["in_state_msw_recycled"] / records.df["recovery_rate"]
     )
 
-    #: Invert to get uncontaminated rate
+    #: Uncontaminated rates by year
     clean_rates = records.df.groupby("Calendar_Year__c").apply(
         lambda year_df: (
-            1
-            - (
-                year_df["recycling_tons_contaminated"].sum()
-                / year_df["recycling_tons_report_contamination_total"].sum()
-            )
+            year_df["in_state_msw_recycled"].sum() / year_df["in_state_msw_received_for_recycling"].sum() * 100
         )
-        * 100
     )
+
     clean_rates.name = "annual_recycling_uncontaminated_rate"
     clean_rates.index.name = "data_year"
     clean_rates.index = clean_rates.index.map(helpers.convert_to_int)

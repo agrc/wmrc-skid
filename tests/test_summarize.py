@@ -130,7 +130,6 @@ class TestSummaryMethods:
         records = mocker.Mock()
         records.df = pd.DataFrame(
             {
-                # "facility_name": ["foo", "bar", "foo", "bar"],
                 "Calendar_Year__c": [2022, 2022, 2023, 2023],
                 "Out_of_State__c": [0, 100, 0, 100],
                 "Municipal_Solid_Waste__c": [100, 100, 100, 100],

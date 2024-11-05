@@ -101,6 +101,31 @@ class TestSummaryMethods:
 
         pd.testing.assert_series_equal(output_series, test_df)
 
+    def test_recovery_rates_by_tonnage_replaces_inf_with_zero(self, mocker):
+        records = mocker.Mock()
+        records.df = pd.DataFrame(
+            {
+                "Calendar_Year__c": [2022, 2022, 2023, 2023],
+                "Out_of_State__c": [0, 0, 0, 0],
+                "Municipal_Solid_Waste__c": [100, 100, 100, 100],
+                "Annual_Recycling_Contamination_Rate__c": [np.nan, np.nan, 50, 50],
+                "Combined_Total_of_Material_Recycled__c": [50, 100, 50, 40],
+            }
+        )
+
+        output_series = summarize.recovery_rates_by_tonnage(records)
+
+        test_df = pd.Series(
+            {
+                2022: np.nan,
+                2023: 50.0,
+            },
+            name="annual_recycling_uncontaminated_rate",
+        )
+        test_df.index.name = "data_year"
+
+        pd.testing.assert_series_equal(output_series, test_df)
+
     def test_recovery_rates_by_tonnage_uses_out_of_state_modifier(self, mocker):
         records = mocker.Mock()
         records.df = pd.DataFrame(

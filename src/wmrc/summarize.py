@@ -2,6 +2,7 @@
 Calender_Year__c to create dataframes of the reports that will be used to update the AGOL feature services.
 """
 
+import numpy as np
 import pandas as pd
 
 try:
@@ -233,6 +234,7 @@ def recovery_rates_by_tonnage(records: helpers.SalesForceRecords) -> pd.Series:
         )
     )
 
+    clean_rates.replace([np.inf, -np.inf], np.nan, inplace=True)  #: Can arise from division by np.nan
     clean_rates.name = "annual_recycling_uncontaminated_rate"
     clean_rates.index.name = "data_year"
     clean_rates.index = clean_rates.index.map(helpers.convert_to_int)

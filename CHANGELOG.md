@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/agrc/wmrc-skid/compare/v1.2.5...v1.2.6) (2024-11-05)
+
+
+### Bug Fixes
+
+* improve recovery/uncontamination rate ([54f71e4](https://github.com/agrc/wmrc-skid/commit/54f71e4e35a2d6cfb1620403c288a655d3205c57))
+
 ## [1.2.5](https://github.com/agrc/wmrc-skid/compare/v1.2.4...v1.2.5) (2024-10-31)
 
 

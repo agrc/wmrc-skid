@@ -177,6 +177,7 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
         .str.replace("_", " ")
         .str.replace(" CM", " Compostable Material")
         .str.replace("SW Stream", "Other Solid Waste Stream Materials")
+        .str.replace("Paper", "Paper and Paperboard")
     )
 
     return sum_df

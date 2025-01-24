@@ -39,8 +39,8 @@ setup(
     keywords=["gis"],
     install_requires=[
         "ugrc-palletjack>=5.0,<5.2",
-        "agrc-supervisor==3.1.0",
-        "google-cloud-storage>=2.16,<2.19",
+        "ugrc-supervisor>=3.1.3",
+        "google-cloud-storage>=2.19",
     ],
     extras_require={
         "tests": [

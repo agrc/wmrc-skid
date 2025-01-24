@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.7](https://github.com/agrc/wmrc-skid/compare/v1.2.6...v1.2.7) (2025-01-24)
+
+
+### Dependencies
+
+* update packages ([11b1b37](https://github.com/agrc/wmrc-skid/commit/11b1b37e5d34f218b48f17b73706bbe3f3abc8fa))
+* updates for ugrc supervisor package ([1094f0d](https://github.com/agrc/wmrc-skid/commit/1094f0d9e38342e15ae9432278483905ef9f8564))
+
 ## [1.2.6](https://github.com/agrc/wmrc-skid/compare/v1.2.5...v1.2.6) (2024-11-05)
 
 

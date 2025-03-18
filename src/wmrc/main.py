@@ -379,23 +379,22 @@ class Skid:
         counties_df = pd.DataFrame.spatial.from_layer(
             arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
         )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=FutureWarning)
-            counties_df.spatial.project(26912)
-            counties_df.reset_index(inplace=True)
-            counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name
-            counties_df.spatial.set_geometry("SHAPE")
-            counties_df.spatial.sr = {"wkid": 26912}
 
-            #: Convert dataframe to spatial
-            input_df = input_df[
-                input_df["latitude"].astype(bool) & input_df["longitude"].astype(bool)
-            ]  #: Drop empty lat/long
-            spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column="longitude", y_column="latitude")
-            spatial_df.reset_index(drop=True, inplace=True)
-            spatial_df.spatial.project(26912)
-            spatial_df.spatial.set_geometry("SHAPE")
-            spatial_df.spatial.sr = {"wkid": 26912}
+        counties_df.spatial.project(26912)
+        counties_df.reset_index(inplace=True)
+        counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name
+        counties_df.spatial.set_geometry("SHAPE")
+        counties_df.spatial.sr = {"wkid": 26912}
+
+        #: Convert dataframe to spatial
+        input_df = input_df[
+            input_df["latitude"].astype(bool) & input_df["longitude"].astype(bool)
+        ]  #: Drop empty lat/long
+        spatial_df = pd.DataFrame.spatial.from_xy(input_df, x_column="longitude", y_column="latitude")
+        spatial_df.reset_index(drop=True, inplace=True)
+        spatial_df.spatial.project(26912)
+        spatial_df.spatial.set_geometry("SHAPE")
+        spatial_df.spatial.sr = {"wkid": 26912}
 
         #: Perform the join, clean up the output
         joined_points_df = spatial_df.spatial.join(counties_df, "left", "within")

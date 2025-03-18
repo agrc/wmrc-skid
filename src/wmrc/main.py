@@ -7,6 +7,7 @@ import base64
 import json
 import logging
 import sys
+import warnings
 from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -34,6 +35,9 @@ except ImportError:
     import version
     import yearly
 
+#: The reprojection of the county geometries in Skid._update_facilities() is throwing a bunch of FutureWarnings that
+#: gum up logs. Adding this to the module so that any FutureWarnings are only shown once.
+warnings.simplefilter(action="once", category=FutureWarning)
 
 class Skid:
     def __init__(self):

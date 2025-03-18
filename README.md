@@ -18,6 +18,10 @@ It pulls data from a Google Sheet (facility ids, used oil collection center [UOC
 
 It is designed to run weekly as a Google Cloud Function.
 
+### Renaming Recycled/Composted Categories
+
+Some material names in the recycled/composted reports are abbreviated in the salesforce data. These (along with any other material names) can be renamed as part of the great renaming chain in the end of `yearly.rates_per_material()`.
+
 ## Validation Script
 
 The validation script compares year-over-year changes for different metrics at the facility, county, and state levels to help WMRC staff identify potential typos, missing information, or other problems with the data.

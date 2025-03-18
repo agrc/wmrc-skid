@@ -380,7 +380,7 @@ class Skid:
             arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
         )
         with warnings.catch_warnings():
-            warnings.simplefilter("once", category=FutureWarning)
+            warnings.simplefilter("ignore", category=FutureWarning)
             counties_df.spatial.project(26912)
             counties_df.reset_index(inplace=True)
             counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name

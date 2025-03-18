@@ -7,7 +7,6 @@ import base64
 import json
 import logging
 import sys
-import warnings
 from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -379,7 +378,6 @@ class Skid:
         counties_df = pd.DataFrame.spatial.from_layer(
             arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
         )
-
         counties_df.spatial.project(26912)
         counties_df.reset_index(inplace=True)
         counties_df = counties_df.reindex(columns=["SHAPE", "NAME"])  #: We only care about the county name

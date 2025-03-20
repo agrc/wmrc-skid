@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.8](https://github.com/agrc/wmrc-skid/compare/v1.2.7...v1.2.8) (2025-03-20)
+
+
+### Styles
+
+* rename ICD materials ([4627669](https://github.com/agrc/wmrc-skid/commit/462766957fcacc1a40188ef4c9c7aedfea4a0617))
+
 ## [1.2.7](https://github.com/agrc/wmrc-skid/compare/v1.2.6...v1.2.7) (2025-01-24)
 
 

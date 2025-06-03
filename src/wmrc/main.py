@@ -515,7 +515,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    wmrc_skid = Skid()
-    wmrc_skid.process()
+    # wmrc_skid = Skid()
+    # wmrc_skid.process()
 
-    # run_validation()
+    run_validation()

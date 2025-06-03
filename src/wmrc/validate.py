@@ -133,3 +133,15 @@ def _year_over_year_changes(metrics_df: pd.DataFrame, current_year: int) -> pd.D
     return everything[
         list(interleave([pct_change.columns, values_current_year.columns, values_previous_year.columns, diffs.columns]))
     ]
+
+def remove_facilities_with_null_years(facility_records) -> pd.DataFrame:
+    """Drop all records for facilities with null Calendar_Year__c values.
+
+    Records in Salesforce may have a blank Calendar_Year__c field, usually because they have been closed. This throws
+    off the cast to int in facility_year_over_year. As per WMRC, we'll just drop all records for these facilities.
+    """
+
+    facilities_with_null_years = facility_records[facility_records["Calendar_Year__c"].isnull()]["facility_id"].unique()
+    cleaned_records = facility_records[~facility_records["facility_id"].isin(facilities_with_null_years)].copy()
+
+    return cleaned_records

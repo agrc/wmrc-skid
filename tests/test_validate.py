@@ -3,6 +3,7 @@ import itertools
 import numpy as np
 import pandas as pd
 import pytest
+
 from wmrc import validate
 
 
@@ -228,6 +229,23 @@ class TestReportValidations:
 
         pd.testing.assert_frame_equal(expected_output, output)
 
+    def test_remove_facilities_with_null_years_removes_all_associated_rows(self):
+        records_df = pd.DataFrame(
+            {
+                "facility_id": ["SW01", "SW03", "SW01", "SW03", "SW01", "SW03"],
+                "Calendar_Year__c": ["2022", "2022", "2023", "2023", "2024", None],
+            }
+        )
+
+        output = validate.remove_facilities_with_null_years(records_df)
+        expected_output = pd.DataFrame(
+            {
+                "facility_id": ["SW01", "SW01", "SW01"],
+                "Calendar_Year__c": ["2022", "2023", "2024"],
+            }, index = [0, 2, 4]
+        )
+
+        pd.testing.assert_frame_equal(expected_output, output)
 
 class TestYearOverYearChanges:
 

@@ -436,7 +436,8 @@ def run_validation():
     county_summary_df = summarize.counties(records)
 
     wmrc_skid.skid_logger.debug("Year-over-year changes...")
-    facility_changes = validate.facility_year_over_year(facility_summary_df, records.df, base_year)
+    cleaned_facility_records = validate.remove_facilities_with_null_years(records.df)
+    facility_changes = validate.facility_year_over_year(facility_summary_df, cleaned_facility_records, base_year)
     county_changes = validate.county_year_over_year(county_summary_df, base_year)
     state_changes = validate.state_year_over_year(county_summary_df, base_year)
 

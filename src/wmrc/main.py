@@ -374,6 +374,8 @@ class Skid:
             pd.DataFrame: A spatially-enabled dataframe of the facilities in WKID 26912 with county names added.
         """
 
+        #: NOTE: .project() seems to fail in arcgis>2.4.0. Version is pinned in setup.py, requirements.txt
+
         #: Load counties from open data feature service
         counties_df = pd.DataFrame.spatial.from_layer(
             arcgis.features.FeatureLayer.fromitem(gis.content.get(config.COUNTIES_ITEMID))
@@ -516,7 +518,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    # wmrc_skid = Skid()
-    # wmrc_skid.process()
+    wmrc_skid = Skid()
+    wmrc_skid.process()
 
-    run_validation()
+    # run_validation()

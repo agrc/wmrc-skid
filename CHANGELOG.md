@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.9](https://github.com/agrc/wmrc-skid/compare/v1.2.8...v1.2.9) (2025-06-04)
+
+
+### Bug Fixes
+
+* remove closed sites from validation ([6777782](https://github.com/agrc/wmrc-skid/commit/6777782a0e28aca52c66f59b9e2983051b3ab9ea))
+
 ## [1.2.8](https://github.com/agrc/wmrc-skid/compare/v1.2.7...v1.2.8) (2025-03-20)
 
 

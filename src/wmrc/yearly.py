@@ -157,9 +157,16 @@ def rates_per_material(year_df: pd.DataFrame, classification: str, fields: list[
 
     subset_df = year_df[year_df["Classifications__c"].isin(classification)][needed_fields]
 
+
     #: Sum totals across all records taking into account MSW and out-of-state modifiers, calculate total percentage
+
+    #: NOTE: if either out of state or MSW is null, that row comes out to 0
+    #: All year 2023 data have an out-of-state value, but only one 2024 does
+    #: Fixing by filling NaNs with 0s
+    subset_df.fillna(0, inplace=True)
+
     sum_series = pd.Series()
-    for col in needed_fields[:-2]:  #: We don't want sum to include raw MSW or out-of-state modifier values
+    for col in needed_fields[:-2]:  #: We don't want sum up the raw MSW or out-of-state modifier values
         sum_series[col] = (
             (100 - subset_df["Out_of_State__c"]) / 100 * subset_df["Municipal_Solid_Waste__c"] / 100 * subset_df[col]
         ).sum()

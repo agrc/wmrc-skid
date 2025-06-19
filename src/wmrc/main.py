@@ -450,6 +450,10 @@ def run_validation():
     )
     state_changes.rename(columns={col: col.replace("statewide_", "") for col in state_changes.columns}, inplace=True)
 
+    #: Note that the statewide value calculated from the counties includes out-of-state data
+    #: (the state_changes ignores out-of-state)
+    county_changes.rename(index={"Statewide": "Statewide including out-of-state materials"}, inplace=True)
+
     all_changes = pd.concat([facility_changes, county_changes, state_changes], axis=0)
 
     #: Move the msw_recycling_rate columns to the front, write to csv
@@ -518,7 +522,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    wmrc_skid = Skid()
-    wmrc_skid.process()
+    # wmrc_skid = Skid()
+    # wmrc_skid.process()
 
-    # run_validation()
+    run_validation()

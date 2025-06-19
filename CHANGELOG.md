@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.10](https://github.com/agrc/wmrc-skid/compare/v1.2.9...v1.2.10) (2025-06-19)
+
+
+### Bug Fixes
+
+* fill nulls to 0 to fix composting numbers bug ([d14d938](https://github.com/agrc/wmrc-skid/commit/d14d938fa540c85e904d7711eaf13017756011cd))
+
 ## [1.2.9](https://github.com/agrc/wmrc-skid/compare/v1.2.8...v1.2.9) (2025-06-04)
 
 

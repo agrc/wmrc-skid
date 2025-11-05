@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.11](https://github.com/agrc/wmrc-skid/compare/v1.2.10...v1.2.11) (2025-11-05)
+
+
+### Dependencies
+
+* dbot updates in single pr ([c0e52bd](https://github.com/agrc/wmrc-skid/commit/c0e52bd70edf9b663c2b3d67da5034329e217882))
+* switch dbot schedule ([f472fdf](https://github.com/agrc/wmrc-skid/commit/f472fdf625fbf3e43e8776cab6885fcf6bd2f6f5))
+
 ## [1.2.10](https://github.com/agrc/wmrc-skid/compare/v1.2.9...v1.2.10) (2025-06-19)
 
 

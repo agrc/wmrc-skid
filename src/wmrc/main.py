@@ -111,7 +111,7 @@ class Skid:
         logging.captureWarnings(True)
 
         skid_logger.debug("Creating Supervisor object")
-        self.supervisor = Supervisor(handle_errors=True)
+        self.supervisor = Supervisor(handle_errors=True, logger=skid_logger, log_path=self.log_path)
         sendgrid_settings = config.SENDGRID_SETTINGS
         sendgrid_settings["api_key"] = self.secrets.SENDGRID_API_KEY
         self.supervisor.add_message_handler(
@@ -298,7 +298,9 @@ class Skid:
 
         #:  Truncate and load to AGOL
         self.skid_logger.info("Preparing data for truncate and load...")
-        google_and_sf_data.spatial.project(4326)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            google_and_sf_data.spatial.project(4326)
         google_and_sf_data.spatial.set_geometry("SHAPE")
         google_and_sf_data.spatial.sr = {"wkid": 4326}
         google_and_sf_data["last_updated"] = date.today()

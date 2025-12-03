@@ -7,6 +7,7 @@ import base64
 import json
 import logging
 import sys
+import warnings
 from datetime import date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -110,7 +111,7 @@ class Skid:
         logging.captureWarnings(True)
 
         skid_logger.debug("Creating Supervisor object")
-        self.supervisor = Supervisor(handle_errors=False)
+        self.supervisor = Supervisor(handle_errors=True)
         sendgrid_settings = config.SENDGRID_SETTINGS
         sendgrid_settings["api_key"] = self.secrets.SENDGRID_API_KEY
         self.supervisor.add_message_handler(
@@ -261,6 +262,8 @@ class Skid:
         self.skid_logger.info("Loading data from Google Sheets...")
         combined_df = self._parse_from_google_sheets()
         self.skid_logger.info("Adding county names from SGID county boundaries...")
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=FutureWarning)
         with_counties_df = self._get_county_names(combined_df, gis)
 
         #:  Merge facility summaries and google sheet on id_
@@ -522,7 +525,7 @@ def subscribe(cloud_event: CloudEvent) -> None:
 
 #: Putting this here means you can call the file via `python main.py` and it will run. Useful for pre-GCF testing.
 if __name__ == "__main__":
-    # wmrc_skid = Skid()
-    # wmrc_skid.process()
+    wmrc_skid = Skid()
+    wmrc_skid.process()
 
-    run_validation()
+    # run_validation()

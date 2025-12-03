@@ -264,7 +264,7 @@ class Skid:
         self.skid_logger.info("Adding county names from SGID county boundaries...")
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=FutureWarning)
-        with_counties_df = self._get_county_names(combined_df, gis)
+            with_counties_df = self._get_county_names(combined_df, gis)
 
         #:  Merge facility summaries and google sheet on id_
         google_and_sf_data = with_counties_df.merge(

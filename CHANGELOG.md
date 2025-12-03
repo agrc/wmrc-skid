@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.12](https://github.com/agrc/wmrc-skid/compare/v1.2.11...v1.2.12) (2025-12-03)
+
+
+### Bug Fixes
+
+* use supervisor to notify on errors ([c810fff](https://github.com/agrc/wmrc-skid/commit/c810fffc1de2ee52a0a7cfc798c2ecd0a313dbf2))
+
 ## [1.2.11](https://github.com/agrc/wmrc-skid/compare/v1.2.10...v1.2.11) (2025-11-05)
 
 

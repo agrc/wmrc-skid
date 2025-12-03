@@ -238,7 +238,9 @@ class Skid:
         new_data = county_summary_df.merge(county_geoms, left_index=True, right_index=True, how="left")
 
         new_data.reset_index(inplace=True)
-        new_data.spatial.project(4326)
+        with warnings.catch_warnings():
+            warnings.simplefilter(action="ignore", category=FutureWarning)
+            new_data.spatial.project(4326)
         new_data.spatial.sr = {"wkid": 4326}
 
         updater = load.ServiceUpdater(gis, config.COUNTY_LAYER_ITEMID, working_dir=self.tempdir_path)

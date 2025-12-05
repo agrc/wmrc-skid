@@ -1,4 +1,4 @@
 ugrc-supervisor==3.2.*
-ugrc-palletjack==5.2.*
+ugrc-palletjack==5.2.10-rc.1
 google-cloud-storage==2.19.*
 arcgis==2.4.0

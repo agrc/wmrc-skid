@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.13](https://github.com/agrc/wmrc-skid/compare/v1.2.12...v1.2.13) (2025-12-05)
+
+
+### Bug Fixes
+
+* missed a .project for warning suppression ([7b32c11](https://github.com/agrc/wmrc-skid/commit/7b32c116753c2e1810312041072a5bcf63391d60))
+
 ## [1.2.12](https://github.com/agrc/wmrc-skid/compare/v1.2.11...v1.2.12) (2025-12-03)
 
 

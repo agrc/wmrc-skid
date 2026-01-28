@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.14](https://github.com/agrc/wmrc-skid/compare/v1.2.13...v1.2.14) (2026-01-28)
+
+
+### Dependencies
+
+* **dev:** update functions-framework requirement ([95eea2d](https://github.com/agrc/wmrc-skid/commit/95eea2d498845ffe3e6ed7b1b1c7cd4a20dff9c5))
+* **dev:** update pytest requirement from &lt;9,&gt;=6 to &gt;=6,&lt;10 ([c6786d8](https://github.com/agrc/wmrc-skid/commit/c6786d803078080874467dfc376f4316e6f848ff))
+
 ## [1.2.13](https://github.com/agrc/wmrc-skid/compare/v1.2.12...v1.2.13) (2025-12-05)
 
 

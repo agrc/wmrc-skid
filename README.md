@@ -36,3 +36,7 @@ It runs on the following schedule:
 ## Multiple Schedules, One Function
 
 This skid is deployed as a single gen2 Cloud Function with two different schedules. Each Cloud Schedule should contain a different message-body: `'facility updates'` to trigger the feature service updating, and `'validate'` to trigger the validator script.
+
+## Attribution
+
+This project was developed with the assistance of [GitHub Copilot](https://github.com/features/copilot).

@@ -33,6 +33,10 @@ It runs on the following schedule:
 - May 20 of each year: Data from previous year live on map (validation script doesn't run, but reminder for us to change the year value in config.py and any needed filters on the map/dashboard)
 - June 1 of each year: Final check
 
+## Yearly Updates
+
+The data for each year shouldn't hit the dashboard until after the final check on June 1st. To accomplish this, the dashboard has filters set on each of the graphs. After the data go live, the filters need to be updated. The pie charts show the desired year, and the line graphs show all the validated years (year includes 2023, 2024, etc).
+
 ## Multiple Schedules, One Function
 
 This skid is deployed as a single gen2 Cloud Function with two different schedules. Each Cloud Schedule should contain a different message-body: `'facility updates'` to trigger the feature service updating, and `'validate'` to trigger the validator script.

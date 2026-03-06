@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.15](https://github.com/agrc/wmrc-skid/compare/v1.2.14...v1.2.15) (2026-03-06)
+
+
+### Bug Fixes
+
+* typo in material name ([c30fe9d](https://github.com/agrc/wmrc-skid/commit/c30fe9db8943c3fe6497df18dd2f41bd33456934))
+
+
+### Documentation
+
+* update readme with dashboard filter info ([8dde348](https://github.com/agrc/wmrc-skid/commit/8dde348bd56da86209b567f79bb660c6f3986140))
+
 ## [1.2.14](https://github.com/agrc/wmrc-skid/compare/v1.2.13...v1.2.14) (2026-01-28)
 
 

@@ -35,7 +35,7 @@ It runs on the following schedule:
 
 ## Yearly Updates
 
-The data for each year shouldn't hit the dashboard until after the final check on June 1st. To accomplish this, the dashboard has filters set on each of the graphs. After the data go live, the filters need to be updated. The pie charts show the desired year, and the line graphs show all the validated years (year includes 2023, 2024, etc).
+The data for each year shouldn't hit the dashboard until after the final check on June 1st. To accomplish this, the dashboard has filters set on each of the graphs. After the data go live, the filters need to be updated. The pie charts show the desired year, and the line graphs show all the validated years (year includes 2023, 2024, etc). Don't forget to update both the desktop and mobile views.
 
 ## Multiple Schedules, One Function
 
